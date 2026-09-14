@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>山海破 · P0 可玩原型</title>
+<style>
+  :root{
+    --ink:#1A1B1C; --sub:#6B7280; --paper:#F4F1E8; --card:#FFFDF6;
+    --line:#E4E1D5; --gold:#C9A227; --accent:#7C5CBF;
+    --e-jin:#C8863A; --e-mu:#5FA85F; --e-shui:#4A90C4; --e-huo:#D2554F; --e-tu:#B89B3C;
+    --good:#3E8E4E; --bad:#C0392B;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif; background:linear-gradient(160deg,#F4F1E8 0%,#E8E2D2 100%); color:var(--ink); min-height:100vh; padding:10px;}
+  .wrap{max-width:1060px; margin:0 auto;}
+  header{text-align:center; padding:8px 0 4px;}
+  header h1{font-size:26px; letter-spacing:6px; color:#3D2F5C;}
+  header .sub{font-size:12px; color:var(--sub); margin-top:2px;}
+  .topbar{display:flex; justify-content:space-between; align-items:center; margin:8px 0; gap:8px; flex-wrap:wrap;}
+  .btn{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:8px 14px; font-size:14px; cursor:pointer; color:var(--ink);}
+  .btn:hover{background:#F0EAD8;}
+  .btn:disabled{opacity:.4; cursor:not-allowed;}
+  .btn.primary{background:#3D2F5C; color:#FFF; border-color:#3D2F5C;}
+  .btn.primary:hover{background:#4F3F75;}
+  .btn.alert{background:var(--bad); color:#FFF; border-color:var(--bad);}
+  .btn.small{padding:4px 10px; font-size:12px;}
+
+  .zone{background:rgba(255,253,246,.75); border:1px solid var(--line); border-radius:14px; padding:10px; margin-bottom:10px;}
+  .zone-title{font-size:12px; font-weight:600; color:var(--sub); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;}
+  .meters{display:flex; gap:14px; flex-wrap:wrap; font-size:13px; align-items:center;}
+  .meter{display:flex; align-items:center; gap:6px;}
+  .meter .bar{width:120px; height:10px; background:#E4E1D5; border-radius:6px; overflow:hidden; position:relative;}
+  .meter .fill{height:100%; border-radius:6px; transition:width .25s;}
+  .meter .label{font-weight:600; min-width:64px;}
+
+  .field{display:flex; gap:10px; min-height:96px; align-items:stretch;}
+  .slot{flex:1 1 0; min-width:0; border:2px dashed var(--line); border-radius:12px; padding:6px; display:flex; flex-direction:column; gap:4px; background:rgba(0,0,0,.02);}
+  .slot.occupied{border-style:solid; border-color:var(--line); background:var(--card);}
+  .slot.hoverable{cursor:pointer;}
+  .slot.hoverable:hover{border-color:var(--accent);}
+  .slot .slot-tag{font-size:10px; color:var(--sub); text-align:center;}
+  .card{position:relative; border-radius:10px; padding:6px 8px; font-size:12px; line-height:1.35; cursor:pointer; user-select:none; border:1px solid var(--line); background:var(--card); box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .card:hover{box-shadow:0 3px 8px rgba(0,0,0,.14);}
+  .card.selected{outline:3px solid var(--accent);}
+  .card .cname{font-weight:700; font-size:13px;}
+  .card .cmeta{color:var(--sub); font-size:11px;}
+  .card .ceffect{font-size:11px; color:#4A4036; margin-top:2px;}
+  .card.broken{background:linear-gradient(135deg,#FDF0F2,#FBE3E8); border-color:#D98A94;}
+  .card.broken .cname{color:#A63244;}
+  .card.sealedmark::after{content:"封"; position:absolute; top:3px; right:6px; font-size:10px; color:#8A7B5E; border:1px solid #8A7B5E; border-radius:4px; padding:0 3px; background:rgba(255,255,255,.7);}
+  .card.dead{opacity:.55;}
+  .stats{display:flex; gap:8px; font-size:12px; font-weight:700; margin-top:3px;}
+  .stat{background:#EFEBDE; border-radius:6px; padding:1px 6px;}
+  .stat.atk{color:var(--bad);}
+  .stat.hp{color:var(--good);}
+  .stat.cost{color:var(--accent);}
+  .element-tag{display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; border-radius:50%; color:#FFF; font-size:11px; font-weight:700; margin-right:3px;}
+
+  .hand{display:flex; gap:8px; overflow-x:auto; padding:6px 2px; min-height:110px;}
+  .hand .card{min-width:118px; max-width:132px; flex:0 0 auto;}
+  .hand .card.playable{border-color:#3D2F5C;}
+  .hand .card.notplay{opacity:.55;}
+
+  .actionbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap; min-height:38px;}
+  .hint{font-size:12px; color:var(--sub);}
+  .logbox{height:120px; overflow-y:auto; font-size:12px; line-height:1.6; background:#FFFDF6; border:1px solid var(--line); border-radius:8px; padding:6px 10px;}
+  .logbox .lg-e{color:var(--bad);}
+  .logbox .lg-g{color:var(--good);}
+  .logbox .lg-p{color:var(--accent);}
+  .logbox .lg-s{color:var(--sub);}
+
+  .debug{background:#2B2733; color:#C9D1D9; border-radius:12px; padding:10px; margin-top:10px; font-size:12px;}
+  .debug summary{cursor:pointer; color:#8B93A5; font-weight:600;}
+  .debug .dg-grid{display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:8px;}
+  .debug label{display:flex; align-items:center; gap:6px; color:#AAB3C2;}
+  .debug input{width:56px; background:#1F1C26; color:#E6EDF3; border:1px solid #444; border-radius:5px; padding:3px 6px;}
+  .debug .stats-line{margin-top:8px; color:#E6EDF3; line-height:1.7;}
+  .debug .stats-line b{color:#FFD77A;}
+  .help{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px; font-size:12px; line-height:1.7; color:#4A4036; margin-bottom:10px;}
+  .help summary{cursor:pointer; font-weight:600; color:#3D2F5C;}
+  .endbanner{position:fixed; inset:0; background:rgba(20,16,28,.72); display:flex; align-items:center; justify-content:center; z-index:50;}
+  .endbox{background:var(--card); border-radius:16px; padding:26px 34px; text-align:center; max-width:420px; width:90%;}
+  .endbox h2{font-size:24px; margin-bottom:8px; letter-spacing:3px;}
+  .endbox .result-stats{font-size:13px; color:var(--sub); line-height:1.8; margin:10px 0; text-align:left;}
+  .endbox .btn{margin:4px 6px;}
+  .turn-tag{font-weight:700; font-size:14px; color:#3D2F5C;}
+  @media (max-width:640px){
+    .slot{min-height:80px;}
+    .hand .card{min-width:104px;}
+    .meter .bar{width:80px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>山海破</h1>
+  <div class="sub">P0 可玩原型 · 规则集 SHANHAIPO-001 · v1.0</div>
+</header>
+
+<div class="topbar">
+  <div class="turn-tag" id="turnTag">回合 1 · 你的回合</div>
+  <div>
+    <button class="btn small" onclick="toggleHelp()">操作说明</button>
+    <button class="btn small" onclick="toggleDebug()">调试面板</button>
+    <button class="btn small alert" onclick="restartGame()">重新开局</button>
+  </div>
+</div>
+
+<details class="help" id="helpBox" open>
+  <summary>操作说明（一屏速览）</summary>
+  ① 点击<b>手牌</b>选中（费用不足变灰）；点「部署」放到我方灵位，点「使用」对目标施放神器。<br>
+  ② 点击<b>我方灵位神兽</b>选中，操作栏出现：<b>攻击</b>（再点敌方目标）· <b>破封</b>（消耗破势翻面，+2/+2 与破势技）· <b>破势技</b>（消耗破势发动）。<br>
+  ③ <b>狂性</b>：破封神兽本回合未造成伤害，回合结束你的本源 −1。<b>镇封</b>：对方破封随从被神器/效果翻回封印态后，本局不可再破封。<br>
+  ④ <b>五行</b>：金克木克土克水克火克金，克制 +1、被克 −1（最低 1）。<b>破势</b>：每造成 3 点伤害 +1（上限 10）。<br>
+  ⑤ 祥瑞羁绊（场上祥瑞≥2）：回合开始本源+1；凶煞羁绊（场上凶煞≥2）：我方神兽攻击+1。<br>
+  ⑥ 击破对方 30 点本源获胜；30 回合未分胜负按本源判定。
+</details>
+
+<!-- 敌方 -->
+<div class="zone">
+  <div class="zone-title">敌方（AI）<span id="aiDeckInfo" style="font-weight:400;"></span></div>
+  <div class="meters">
+    <div class="meter"><span class="label">山海本源</span><div class="bar"><div class="fill" id="aiHpBar" style="background:var(--bad);"></div></div><b id="aiHp">30</b><span style="color:var(--sub);font-size:11px;">/30</span></div>
+    <div class="meter"><span class="label">灵气</span><b id="aiMana">1</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
+    <div class="meter"><span class="label">破势</span><div class="bar"><div class="fill" id="aiPoshiBar" style="background:var(--accent);"></div></div><b id="aiPoshi">0</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
+    <div class="meter"><span class="label">手牌</span><b id="aiHand">3</b></div>
+  </div>
+  <div class="field" id="aiField"></div>
+</div>
+
+<!-- 我方 -->
+<div class="zone">
+  <div class="zone-title">你的战场<span id="myDeckInfo" style="font-weight:400;"></span></div>
+  <div class="meters">
+    <div class="meter"><span class="label">山海本源</span><div class="bar"><div class="fill" id="myHpBar" style="background:var(--good);"></div></div><b id="myHp">30</b><span style="color:var(--sub);font-size:11px;">/30</span></div>
+    <div class="meter"><span class="label">灵气</span><b id="myMana">1</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
+    <div class="meter"><span class="label">破势</span><div class="bar"><div class="fill" id="myPoshiBar" style="background:var(--accent);"></div></div><b id="myPoshi">0</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
+    <div class="meter"><span class="label">手牌</span><b id="myHand">3</b></div>
+  </div>
+  <div class="field" id="myField"></div>
+</div>
+
+<div class="zone">
+  <div class="zone-title">手牌 <span id="handHint" class="hint"></span></div>
+  <div class="hand" id="myHandArea"></div>
+  <div class="actionbar" id="actionBar">
+    <button class="btn primary" onclick="endTurn()">结束回合</button>
+  </div>
+  <div class="hint" id="actionHint" style="margin-top:6px;">点击手牌或神兽开始操作</div>
+</div>
+
+<div class="zone">
+  <div class="zone-title">对战日志</div>
+  <div class="logbox" id="logBox"></div>
+</div>
+
+<details class="debug" id="debugBox">
+  <summary>调试面板 · 参数与验证数据</summary>
+  <div class="dg-grid">
+    <label>破势阈值 <input id="cfgPoshiPer" type="number" min="1" max="6" step="1"></label>
+    <label>克制加成 <input id="cfgCB" type="number" min="0" max="3" step="1"></label>
+    <label>被克惩罚 <input id="cfgCP" type="number" min="0" max="3" step="1"></label>
+    <label>破势上限 <input id="cfgPC" type="number" min="4" max="15" step="1"></label>
+    <label>狂性伤害 <input id="cfgRage" type="number" min="0" max="3" step="1"></label>
+    <label>中费破封 <input id="cfgBM" type="number" min="2" max="8" step="1"></label>
+    <button class="btn small" onclick="applyCfg()">应用参数</button>
+    <button class="btn small" onclick="resetCfg()">恢复默认</button>
+  </div>
+  <div class="stats-line" id="debugStats"></div>
+  <div style="margin-top:6px;color:#8B93A5;font-size:11px;">规则集与设计契约一致：破势按每次伤害事件 floor(X/3) 结算；克制 ±1 最低 1；破封消耗按费用 3/5/7；每卡整局最多破封一次，镇封后永久失效。</div>
+</details>
+
+</div>
+
+<div class="endbanner" id="endBanner" style="display:none;">
+  <div class="endbox">
+    <h2 id="endTitle">胜</h2>
+    <div class="result-stats" id="endStats"></div>
+    <button class="btn primary" onclick="restartGame()">再来一局</button>
+    <button class="btn" onclick="hideEnd()">查看战场</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ============ 规则集配置（与 design-contract.json 一致） ============ */
+const DEFAULT_CFG = {
+  ruleset_id: "SHANHAIPO-001",
+  hp: 30, manaCap: 10, handCap: 10,
+  poshiCap: 10, poshiPer: 3,
+  breakLow: 3, breakMid: 5, breakHigh: 7,   // 按费用 1-2 / 3-4 / 5+
+  counterBonus: 1, counterPenalty: 1, minDamage: 1,
+  rageDamage: 1, breakAtk: 2, breakHp: 2,
+  maxTurns: 30, mulligan: 3, drawPerTurn: 1,
+};
+let CFG = Object.assign({}, DEFAULT_CFG);
+const ELEMENTS = ["金","木","水","火","土"];
+const COUNTER = {"金":"木","木":"土","土":"水","水":"火","火":"金"};
+const ECOLOR = {"金":"var(--e-jin)","木":"var(--e-mu)","水":"var(--e-shui)","火":"var(--e-huo)","土":"var(--e-tu)"};
+
+/* ============ 卡牌数据（P0 子集 25 张 = 24 张正式卡 + 1 张镇封验证神器「番天印」，原型简化标注） ============ */
+function C(id,name,cost,atk,hp,element,aura,effect,skill,source){
+  return {id,name,cost,atk,hp,element,aura,effect,skill,source, kind: atk>0?"creature":"artifact"};
+}
+const CARDS = [
+  // 金系
+  C("W1","白虎",5,5,6,"金","凶",null,{name:"庚金啸",cost:4,type:"allEnemy",value:1,desc:"敌方所有神兽 −1"}, "《西山经》"),
+  C("W2","獬豸",2,2,3,"金","祥",{type:"onEnter",fx:"enemyAtkDown",value:1,desc:"进场：敌方一神兽本回合攻击 −1"},{name:"明断",cost:2,type:"enemyAtkDown",value:2,desc:"敌方一神兽本回合攻击 −2"}, "《西山经》"),
+  C("W3","狰",4,4,5,"金","凶",null,{name:"锐角",cost:3,type:"selfAtkUp",value:2,desc:"本回合攻击 +2"}, "《西山经》"),
+  C("A1","轩辕剑",4,0,0,"金",null,{type:"damage",target:"enemyCreature",value:4,desc:"对敌方一个神兽造成 4 点伤害"},null, "黄帝轩辕"),
+  // 木系
+  C("M1","白泽",3,3,4,"木","祥",{type:"onEnter",fx:"peek",desc:"进场：查看对手 1 张手牌"},{name:"洞见",cost:2,type:"draw",value:2,desc:"抽 2 张牌"}, "《西山经》"),
+  C("M2","精卫",1,1,2,"木","祥",{type:"death",fx:"reshuffle",desc:"亡语：将本卡洗回牌库"},{name:"衔石",cost:1,type:"selfAtkUp",value:1,desc:"本回合攻击 +1"}, "《北山经》"),
+  C("M3","乘黄",2,2,3,"木","祥",{type:"onEnter",fx:"allyAtkUp",value:1,desc:"进场：友方神兽本回合 +1 攻击"},{name:"驰骋",cost:2,type:"buffAll",value:1,desc:"友方神兽 +1/+1"}, "《海外西经》"),
+  C("A2","神农鼎",3,0,0,"木",null,{type:"heal",target:"ownCreature",value:3,desc:"友方神兽恢复 3 点生命"},null, "上古神器"),
+  // 水系
+  C("W4","玄武",6,6,7,"水","祥",{type:"passive",fx:"hpReduce",desc:"你的本源受到伤害 −1"},{name:"玄冥",cost:5,type:"healHp",value:4,desc:"本源恢复 4 点"}, "《海外北经》"),
+  C("W5","应龙",6,6,7,"水","凶",{type:"onEnter",fx:"damageEnemy",value:2,desc:"进场：对敌方一神兽造成 2 点伤害"},{name:"兴雨",cost:5,type:"damageHp",value:3,desc:"敌方本源 −3"}, "《大荒北经》"),
+  C("W6","夫诸",3,3,4,"水","祥",null,{name:"止水",cost:2,type:"freeze",desc:"冻结敌方一神兽（本回合不能攻击）"}, "《中山经》"),
+  C("A3","定海神针",3,0,0,"水",null,{type:"buffHp",target:"ownCreature",value:3,desc:"友方神兽生命 +3"},null, "《海内经》"),
+  // 火系
+  C("F1","毕方",2,2,3,"火","祥",{type:"onEnter",fx:"damageHp",value:1,desc:"进场：敌方本源 −1"},{name:"焚羽",cost:2,type:"allEnemy",value:1,desc:"敌方所有神兽 −1"}, "《西山经》"),
+  C("F2","九婴",5,5,6,"火","凶",null,{name:"九首",cost:4,type:"damage",target:"enemyCreature",value:3,desc:"敌方一神兽 −3"}, "《海外南经》"),
+  C("F3","三足乌",1,1,3,"火","祥",null,{name:"曜日",cost:1,type:"damageHp",value:1,desc:"敌方本源 −1"}, "《大荒东经》"),
+  C("A4","射日弓",5,0,0,"火",null,{type:"damageHpCond",value:3,desc:"敌方本源 −3；若你场上有火系神兽再 −2"},null, "羿射九日"),
+  C("A5","番天印",3,0,0,"土",null,{type:"seal",target:"enemyCreature",value:0,desc:"镇封敌方一个破封神兽：翻回封印态，本局不可再破封"},null, "上古神器"),
+  // 土系
+  C("E1","九尾狐",4,4,5,"土","祥",{type:"death",fx:"draw",value:1,desc:"亡语：抽 1 张牌"},{name:"魅惑",cost:3,type:"freeze",desc:"敌方一神兽本回合无法攻击"}, "《南山经》"),
+  C("E2","饕餮",5,5,6,"土","凶",null,{name:"吞噬",cost:4,type:"destroyLe3",desc:"消灭一个生命 ≤3 的敌方神兽"}, "《北山经》"),
+  C("E3","刑天",6,6,7,"土","凶",{type:"death",fx:"immuneOnce",desc:"亡语：本局你下一次致命伤害被抵消"},{name:"干戚",cost:5,type:"damageHp",value:3,desc:"敌方本源 −3"}, "《海外西经》"),
+  C("E4","开明兽",4,4,5,"土","祥",null,{name:"九门",cost:3,type:"draw",value:1,desc:"抽 1 张牌"}, "《海内西经》"),
+];
+
+/* ============ 游戏状态 ============ */
+let G = null;
+let ui = { selCard:null, selField:null, mode:"idle", pending:{type:null, card:null, caster:null} };
+
+function newSide(deck){
+  return {
+    hp: CFG.hp, mana: 1, manaCap: 1, poshi: 0,
+    deck: shuffle(deck.slice()), hand: [], field: [null,null,null],
+    grave: [], turnPlayed: [], immune: false, turnAtkDown: 0,
+    brokenFlags: {}, sealedFlags: {},
+  };
+}
+function newGame(){
+  G = {
+    turn: 1, active: "player", ended: false, winner: null,
+    player: newSide(CARDS.map(c=>c.id)),
+    ai: newSide(CARDS.map(c=>c.id)),
+    stats: {breaks:0, counterAttacks:0, attacks:0, raged:0, sealed:0, skills:0, mulligan:0},
+    log: [], eventSeq: 0,
+  };
+  for(let i=0;i<3;i++){ G.player.hand.push(G.player.deck.pop()); }
+  for(let i=0;i<3;i++){ G.ai.hand.push(G.ai.deck.pop()); }
+  renderAll();
+  logMsg("对局开始：你的回合（先手）。点击手牌部署神兽。","s");
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+function draw(side,n){
+  for(let i=0;i<n;i++){
+    if(side.deck.length===0){ damageHpRaw(side,1,"疲乏"); logMsg("牌库已空，抽牌受到 1 点疲乏伤害。","e"); continue; }
+    side.hand.push(side.deck.pop());
+  }
+  if(side.hand.length>CFG.handCap){
+    // 手牌超上限由玩家弃置（AI 自动弃最贵）
+    while(side.hand.length>CFG.handCap){
+      if(side===G.player){ side.hand.sort((a,b)=>CARDS.find(x=>x.id===a).cost-CARDS.find(x=>x.id===b).cost); side.hand.shift(); logMsg("手牌超过上限，自动弃置 1 张（原型简化）。","s"); }
+      else { side.hand.sort((a,b)=>CARDS.find(x=>x.id===a).cost-CARDS.find(x=>x.id===b).cost); side.hand.shift(); }
+    }
+  }
+}
+
+/* ============ 战斗结算（按 GDD 4.6 顺序：伤害→死亡→破势） ============ */
+function getCounterMod(atkEl, defEl){
+  if(!atkEl||!defEl) return 0;
+  if(COUNTER[atkEl]===defEl) return CFG.counterBonus;
+  if(COUNTER[defEl]===atkEl) return -CFG.counterPenalty;
+  return 0;
+}
+function creatureAtk(side){
+  const aura = side.field.filter(s=>s&&s.aura==="凶").length>=2 ? 1 : 0;
+  return aura; // 凶煞羁绊：攻击 +1
+}
+function auraXiang(side){ return side.field.filter(s=>s&&s.aura==="祥").length>=2; }
+function auraXiong(side){ return side.field.filter(s=>s&&s.aura==="凶").length>=2; }
+
+function slotCard(side, i){ return side.field[i]; }
+function fieldCreatures(side){ return side.field.filter(s=>s&&s.hp>0); }
+
+function dealDamage(attackerSide, attacker, defSide, defSlotIdx, base, isSkill){
+  // attacker: {element, atk, broken, skillBonus} 或 null（法术）
+  let dmg = base;
+  const def = defSide==="hp" ? null : defSide.field[defSlotIdx];
+  if(attacker && def){
+    const mod = getCounterMod(attacker.element, def.element);
+    dmg = Math.max(CFG.minDamage, base + mod);
+    G.stats.attacks++;
+    if(mod>0){ G.stats.counterAttacks++; logMsg(`五行克制：${attacker.name}（${attacker.element}）克制 ${def.name}（${def.element}），伤害 +1。`,"g"); }
+    if(mod<0){ logMsg(`五行被克：${attacker.name}（${attacker.element}）被 ${def.name}（${def.element}）克制，伤害 −1。`,"e"); }
+  }
+  if(def){
+    def.hp -= dmg;
+    logMsg(`${attacker?attacker.name:"效果"} 对 ${def.name} 造成 ${dmg} 点伤害${mod2str(attacker,def)}。`,"n");
+    // 破势：按伤害事件 floor(X/3)
+    if(attacker && attacker.side==="player"){ gainPoshi(G.player, dmg, attacker); }
+    if(attacker && attacker.side==="ai"){ gainPoshi(G.ai, dmg, attacker); }
+    if(def.hp<=0){ killCreature(defSide, defSlotIdx); }
+  } else {
+    // 打本源
+    if(defSide==="hp"){
+      const side = attacker ? (attacker.side==="player"?G.ai:G.player) : null;
+      damageHpRaw(side, dmg, attacker?attacker.name:"效果");
+    }
+  }
+}
+function mod2str(a,d){ if(!a||!d) return ""; const m=getCounterMod(a.element,d.element); return m>0?"（克制）":(m<0?"（被克）":""); }
+
+function gainPoshi(side, dmg, attacker){
+  if(!attacker.broken && attacker.skillBonus){} // 破势仅神兽普通攻击计入（原型：攻击与神兽效果均计）
+  const gain = Math.floor(dmg / CFG.poshiPer);
+  if(gain>0){
+    const before = side.poshi;
+    side.poshi = Math.min(CFG.poshiCap, side.poshi + gain);
+    logMsg(`${side===G.player?"你":"敌方"}获得 ${side.poshi-before} 点破势（本次伤害 ${dmg}）。`,"p");
+  }
+}
+function damageHpRaw(side, dmg, src){
+  if(!side) return;
+  let d = dmg;
+  if(side.field.some(s=>s&&s.effect&&s.effect.fx==="hpReduce")){ d = Math.max(0, d-1); logMsg(`${src}：玄武减伤生效，本源实际 −${d}。`,"s"); }
+  side.hp = Math.max(0, side.hp - d);
+  logMsg(`${src} 使${side===G.player?"你的":"敌方"}本源 −${d}。`,"e");
+  checkEnd();
+}
+function killCreature(sideObj, idx){
+  const s = sideObj.field[idx];
+  if(!s) return;
+  sideObj.field[idx] = null;
+  sideObj.grave.push(s.id);
+  logMsg(`${s.name} 阵亡。`,"e");
+  if(s.effect && s.effect.fx==="reshuffle"){ sideObj.deck.unshift(s.id); shuffle(sideObj.deck); logMsg(`${s.name}（精卫）衔石填海，洗回牌库。`,"g"); }
+  if(s.effect && s.effect.fx==="draw"){ draw(sideObj, s.effect.value||1); }
+  if(s.effect && s.effect.fx==="immuneOnce"){ sideObj.immune = true; logMsg(`${s.name}（刑天）断首犹战：你下一次致命伤害将被抵消。`,"g"); }
+}
+
+/* ============ 破封 / 镇封 / 狂性 ============ */
+function breakCost(cost){
+  if(cost<=2) return CFG.breakLow;
+  if(cost<=4) return CFG.breakMid;
+  return CFG.breakHigh;
+}
+function canBreak(side, slotIdx){
+  const s = side.field[slotIdx];
+  if(!s || s.kind==="artifact") return false;
+  if(s.broken) return false;
+  if(side.brokenFlags[s.id] || side.sealedFlags[s.id]) return false;
+  return true;
+}
+function doBreak(side, slotIdx){
+  const s = side.field[slotIdx];
+  const cost = breakCost(s.cost);
+  if(side.poshi < cost){ logMsg(`破势不足（需 ${cost}）。`,"e"); return; }
+  side.poshi -= cost;
+  s.broken = true;
+  s.atk += CFG.breakAtk; s.hp += CFG.breakHp;
+  side.brokenFlags[s.id] = true;
+  s.skillUsed = false;
+  G.stats.breaks++;
+  logMsg(`${s.name} 破封觉醒！${s.atk-CFG.breakAtk}/${s.hp-CFG.breakHp} → ${s.atk}/${s.hp}，获得破势技「${s.skill? s.skill.name:"—"}」。`,"p");
+  renderAll();
+}
+function doSeal(side, slotIdx){
+  const s = side.field[slotIdx];
+  if(!s || !s.broken) return false;
+  s.broken = false;
+  s.atk -= CFG.breakAtk; s.hp -= CFG.breakHp;
+  side.sealedFlags[s.id] = true;
+  G.stats.sealed++;
+  logMsg(`${s.name} 被镇封，翻回封印态，本局不可再破封。`,"e");
+  return true;
+}
+
+/* ============ 回合流程 ============ */
+function startTurn(side){
+  side.manaCap = Math.min(CFG.manaCap, side.manaCap+1);
+  side.mana = side.manaCap;
+  draw(side, CFG.drawPerTurn);
+  if(auraXiang(side)){ side.hp = Math.min(CFG.hp, side.hp+1); logMsg(`${side===G.player?"你":"敌方"}祥瑞和鸣：本源 +1。`,"g"); }
+  side.turnPlayed = [];
+  side.turnAtkDown = 0;
+  fieldCreatures(side).forEach(s=>{ s.attacked=false; s.frozen=false; s.skillBonus=0; s.turnAtkBuff=0; s.tauntTurn=false; });
+  // 神农鼎等进场效果在部署时处理；回合开始重置临时增益
+}
+function endTurn(){
+  if(G.ended || G.active!=="player") return;
+  settleEnd(G.player);
+  if(G.ended) return;
+  G.active = "ai"; G.turn++;
+  if(G.turn > CFG.maxTurns){ finalByTurns(); return; }
+  renderAll();
+  logMsg(`—— 回合 ${G.turn}：敌方回合 ——`,"s");
+  setTimeout(aiTurn, 350);
+}
+function settleEnd(side){
+  // 狂性反噬
+  side.field.forEach(s=>{
+    if(s && s.broken && !s.attacked && !s.frozen && !s.skillUsed){
+      // 本回合未造成伤害（原型判定：未攻击且未用伤害技）
+      if(s.didDamageThisTurn){ return; }
+      side.hp = Math.max(0, side.hp - CFG.rageDamage);
+      G.stats.raged++;
+      logMsg(`${s.name} 狂性反噬：${side===G.player?"你":"敌方"}本源 −${CFG.rageDamage}。`,"e");
+    }
+    if(s){ s.didDamageThisTurn=false; }
+  });
+  checkEnd();
+}
+
+/* ============ 神器 / 破势技执行 ============ */
+function artifactEffect(card, targetInfo, casterSide){
+  casterSide = casterSide || "player";
+  const caster = casterSide==="player" ? G.player : G.ai;
+  const opp = casterSide==="player" ? G.ai : G.player;
+  const fx = card.effect;
+  if(fx.type==="damage"){
+    if(fx.target==="enemyCreature"){
+      const t = opp.field[targetInfo];
+      if(!t){ logMsg("目标不存在。","e"); return; }
+      dealDamage(caster, {name:card.name, element:card.element, side:casterSide, broken:false, skillBonus:0}, opp, targetInfo, fx.value, true);
+    }
+  } else if(fx.type==="damageHp"){
+    damageHpRaw(opp, fx.value, card.name);
+  } else if(fx.type==="damageHpCond"){
+    let d = fx.value;
+    if(fieldCreatures(caster).some(s=>s.element==="火")){ d += 2; logMsg(`${card.name}：火系神兽在场，额外 −2。`,"g"); }
+    damageHpRaw(opp, d, card.name);
+  } else if(fx.type==="heal"){
+    const t = caster.field[targetInfo];
+    if(!t){ logMsg("目标不存在。","e"); return; }
+    t.hp += fx.value; logMsg(`${card.name} 使 ${t.name} 恢复 ${fx.value} 点生命。`,"g");
+  } else if(fx.type==="buffHp"){
+    const t = caster.field[targetInfo];
+    if(!t){ logMsg("目标不存在。","e"); return; }
+    t.hp += fx.value; logMsg(`${card.name} 使 ${t.name} 生命 +${fx.value}。`,"g");
+  } else if(fx.type==="seal"){
+    const t = opp.field[targetInfo];
+    if(!t){ logMsg("目标不存在。","e"); return; }
+    if(!t.broken){ logMsg(`${card.name}：${t.name} 并非破封态，镇封无效。`,"s"); return; }
+    doSeal(opp, targetInfo);
+  }
+}
+function skillEffect(side, caster, targetInfo){
+  const sk = caster.skill;
+  if(!sk){ return; }
+  if(side.poshi < sk.cost){ logMsg("破势不足。","e"); return; }
+  side.poshi -= sk.cost;
+  caster.skillUsed = true;
+  G.stats.skills++;
+  const opp = side===G.player ? G.ai : G.player;
+  switch(sk.type){
+    case "allEnemy": {
+      fieldCreatures(opp).forEach(t=>{
+        const d = Math.max(1, sk.value);
+        dealDamage(side, {name:caster.name, element:caster.element, side:side===G.player?"player":"ai", broken:true, skillBonus:0}, opp, opp.field.indexOf(t), d, true);
+      });
+      break;
+    }
+    case "enemyAtkDown": {
+      const t = opp.field[targetInfo];
+      if(!t){ return; }
+      t.turnAtkBuff = (t.turnAtkBuff||0) - sk.value;
+      t.frozen = true; // 原型：攻击下降以"本回合无法攻击"简化实现冻结类
+      logMsg(`${caster.name} 的「${sk.name}」：${t.name} 本回合攻击 −${sk.value}。`,"e");
+      break;
+    }
+    case "selfAtkUp": {
+      caster.skillBonus = (caster.skillBonus||0) + sk.value;
+      logMsg(`${caster.name} 的「${sk.name}」：本回合攻击 +${sk.value}。`,"g");
+      break;
+    }
+    case "buffAll": {
+      fieldCreatures(side).forEach(t=>{ t.hp += sk.value; t.skillBonus=(t.skillBonus||0)+sk.value; });
+      logMsg(`${caster.name} 的「${sk.name}」：友方神兽 +${sk.value}/+${sk.value}。`,"g");
+      break;
+    }
+    case "draw": { draw(side, sk.value); break; }
+    case "healHp": { side.hp = Math.min(CFG.hp, side.hp+sk.value); logMsg(`${caster.name} 的「${sk.name}」：本源恢复 ${sk.value}。`,"g"); break; }
+    case "damageHp": { damageHpRaw(opp, sk.value, caster.name+"·"+sk.name); break; }
+    case "damage": {
+      const t = opp.field[targetInfo];
+      if(!t){ return; }
+      dealDamage(side, {name:caster.name, element:caster.element, side:side===G.player?"player":"ai", broken:true, skillBonus:0}, opp, targetInfo, sk.value, true);
+      break;
+    }
+    case "freeze": {
+      const t = opp.field[targetInfo];
+      if(!t){ return; }
+      t.frozen = true;
+      logMsg(`${caster.name} 的「${sk.name}」：${t.name} 本回合无法攻击。`,"e");
+      break;
+    }
+    case "destroyLe3": {
+      const t = opp.field[targetInfo];
+      if(!t){ return; }
+      if(t.hp<=3){ killCreature(opp, targetInfo); logMsg(`${caster.name} 的「${sk.name}」吞噬了 ${t.name}。`,"e"); }
+      else { logMsg(`${t.name} 生命 ${t.hp} > 3，吞噬失败。`,"s"); }
+      break;
+    }
+  }
+  renderAll();
+}
+
+/* ============ 出牌 ============ */
+function playCreature(side, card, slotIdx){
+  const s = { id:card.id, name:card.name, cost:card.cost, atk:card.atk, hp:card.hp, element:card.element, aura:card.aura, kind:"creature",
+    effect:card.effect, skill:card.skill, broken:false, attacked:false, frozen:false, skillUsed:false, skillBonus:0, turnAtkBuff:0, didDamageThisTurn:false };
+  side.field[slotIdx] = s;
+  side.mana -= card.cost;
+  // 进场效果
+  if(card.effect && card.effect.type==="onEnter"){
+    if(card.effect.fx==="peek"){
+      const oppHand = (side===G.player?G.ai:G.player).hand;
+      if(oppHand.length>0){ logMsg(`${card.name}（白泽）通晓万物：窥见对手手牌「${CARDS.find(c=>c.id===oppHand[0]).name}」。`,"p"); }
+    } else if(card.effect.fx==="damageHp"){
+      const opp = side===G.player?G.ai:G.player;
+      damageHpRaw(opp, card.effect.value, card.name);
+    } else if(card.effect.fx==="damageEnemy"){
+      const opp = side===G.player?G.ai:G.player;
+      const targets = fieldCreatures(opp);
+      if(targets.length>0){
+        const t = targets.reduce((a,b)=>a.hp<b.hp?a:b);
+        const idx = opp.field.indexOf(t);
+        dealDamage(side, {name:card.name, element:card.element, side:side===G.player?"player":"ai", broken:false, skillBonus:0}, opp, idx, card.effect.value, true);
+      }
+    } else if(card.effect.fx==="allyAtkUp"){
+      fieldCreatures(side).forEach(t=>{ if(t!==s){ t.turnAtkBuff=(t.turnAtkBuff||0)+card.effect.value; } });
+      logMsg(`${card.name}（乘黄）：友方神兽本回合 +${card.effect.value} 攻击。`,"g");
+    } else if(card.effect.fx==="enemyAtkDown"){
+      const opp = side===G.player?G.ai:G.player;
+      const targets = fieldCreatures(opp);
+      if(targets.length>0){
+        const t = targets[0];
+        t.turnAtkBuff=(t.turnAtkBuff||0)-card.effect.value;
+        logMsg(`${card.name}（獬豸）：${t.name} 本回合攻击 −${card.effect.value}。`,"e");
+      }
+    }
+  }
+  renderAll();
+}
+
+/* ============ AI ============ */
+function aiTurn(){
+  if(G.ended) return;
+  startTurn(G.ai);
+  if(G.ended) return;
+  const ai = G.ai, pl = G.player;
+  // 1. 用神器
+  ai.hand.slice().forEach(cid=>{
+    if(G.ended) return;
+    const card = CARDS.find(c=>c.id===cid);
+    if(card.cost>ai.mana) return;
+    if(card.effect && card.effect.type){
+      let used = false;
+      if(card.effect.type==="damage" && card.effect.target==="enemyCreature"){
+        const ts = fieldCreatures(pl).filter(t=>t.hp>0);
+        if(ts.length>0){ const t=ts[0]; const idx=pl.field.indexOf(t); ai.mana-=card.cost; ai.hand.splice(ai.hand.indexOf(cid),1); artifactEffect(card, idx, "ai"); used=true; }
+      } else if(card.effect.type==="damageHp" || card.effect.type==="damageHpCond"){
+        ai.mana-=card.cost; ai.hand.splice(ai.hand.indexOf(cid),1); artifactEffect(card, null, "ai"); used=true;
+      } else if((card.effect.type==="heal"||card.effect.type==="buffHp") && fieldCreatures(ai).length>0){
+        const t = fieldCreatures(ai)[0]; const idx = ai.field.indexOf(t);
+        ai.mana-=card.cost; ai.hand.splice(ai.hand.indexOf(cid),1); artifactEffect(card, idx, "ai"); used=true;
+      } else if(card.effect.type==="seal"){
+        const brk = fieldCreatures(pl).find(t=>t.broken);
+        if(brk){ const idx=pl.field.indexOf(brk); ai.mana-=card.cost; ai.hand.splice(ai.hand.indexOf(cid),1); artifactEffect(card, idx, "ai"); used=true; }
+      }
+      if(used){ renderAll(); }
+    }
+  });
+  // 2. 部署神兽
+  ai.hand.slice().forEach(cid=>{
+    if(G.ended) return;
+    const card = CARDS.find(c=>c.id===cid);
+    if(card.kind==="creature" && card.cost<=ai.mana){
+      const free = ai.field.map((s,i)=>s?null:i).filter(i=>i!==null);
+      if(free.length>0){ playCreature(ai, card, free[0]); }
+    }
+  });
+  // 3. 破封
+  ai.field.forEach((s,idx)=>{
+    if(G.ended) return;
+    if(s && canBreak(ai, idx) && ai.poshi>=breakCost(s.cost) && s.atk>=4){
+      doBreak(ai, idx);
+    }
+  });
+  // 4. 攻击（优先克制目标）
+  ai.field.forEach(s=>{
+    if(G.ended || !s || s.attacked || s.frozen) return;
+    const atk = s.atk + (s.skillBonus||0) + (s.turnAtkBuff||0);
+    if(atk<=0) { s.attacked=true; return; }
+    const ts = fieldCreatures(pl);
+    // 有守护目标则必须打守护
+    const taunt = ts.filter(t=>t.tauntTurn);
+    let target = null;
+    const pool = taunt.length?taunt:ts;
+    if(pool.length>0){
+      // 找克制目标
+      target = pool.find(t=>COUNTER[s.element]===t.element);
+      if(!target){ target = pool.slice().sort((a,b)=>b.atk-a.atk)[0]; }
+      const idx = pl.field.indexOf(target);
+      attackExec(ai, s, pl, idx, atk);
+    } else {
+      attackHpExec(ai, s, atk);
+    }
+  });
+  // 5. 破势技（简单：对敌方随从用伤害技）
+  ai.field.forEach(s=>{
+    if(G.ended || !s || !s.broken || s.skillUsed) return;
+    const sk = s.skill;
+    if(!sk || ai.poshi < sk.cost) return;
+    if(sk.type==="damage" && fieldCreatures(pl).length>0){
+      const t = fieldCreatures(pl)[0]; const idx = pl.field.indexOf(t);
+      skillEffect(ai, s, idx);
+    } else if(sk.type==="damageHp" || sk.type==="allEnemy"){
+      skillEffect(ai, s, null);
+    }
+  });
+  // 6. 结束
+  if(G.ended) return;
+  settleEnd(G.ai);
+  if(G.ended) return;
+  G.active = "player";
+  startTurn(G.player);
+  renderAll();
+  logMsg(`—— 回合 ${G.turn}：你的回合 ——`,"s");
+}
+function attackExec(attSide, s, defSide, idx, atk){
+  s.attacked = true;
+  s.didDamageThisTurn = true;
+  dealDamage(attSide, {name:s.name, element:s.element, side:attSide===G.player?"player":"ai", broken:s.broken, skillBonus:s.skillBonus||0}, defSide, idx, atk, false);
+}
+function attackHpExec(attSide, s, atk){
+  s.attacked = true;
+  s.didDamageThisTurn = true;
+  damageHpRaw(attSide===G.player?G.ai:G.player, atk, s.name);
+}
+
+/* ============ 胜负 ============ */
+function checkEnd(){
+  if(G.ended) return;
+  if(G.player.hp<=0){ G.ended=true; G.winner="ai"; showEnd(); }
+  else if(G.ai.hp<=0){ G.ended=true; G.winner="player"; showEnd(); }
+}
+function finalByTurns(){
+  G.ended = true;
+  G.winner = G.player.hp>G.ai.hp?"player":(G.ai.hp>G.player.hp?"ai":"draw");
+  showEnd();
+}
+function showEnd(){
+  const w = G.winner;
+  document.getElementById("endTitle").textContent = w==="player"?"胜！":(w==="ai"?"败":"平局");
+  document.getElementById("endTitle").style.color = w==="player"?"var(--good)":"var(--bad)";
+  document.getElementById("endStats").innerHTML =
+    `本局回合：${G.turn} ｜ 你的本源 ${G.player.hp} vs 敌方 ${G.ai.hp}<br>`+
+    `破封次数：${G.stats.breaks} ｜ 狂性触发：${G.stats.raged} ｜ 镇封：${G.stats.sealed}<br>`+
+    `攻击次数：${G.stats.attacks} ｜ 克制攻击：${G.stats.counterAttacks}（${G.stats.attacks?Math.round(G.stats.counterAttacks/G.stats.attacks*100):0}%）<br>`+
+    `破势技发动：${G.stats.skills} ｜ 重开次数：${G.stats.mulligan}`;
+  document.getElementById("endBanner").style.display="flex";
+}
+function hideEnd(){ document.getElementById("endBanner").style.display="none"; }
+function restartGame(){
+  newGame();
+  hideEnd();
+}
+
+/* ============ 日志 ============ */
+function logMsg(txt, kind){
+  G.log.push({t:txt,k:kind});
+  const box = document.getElementById("logBox");
+  const div = document.createElement("div");
+  div.className = "lg-"+(kind||"n");
+  div.textContent = `[${G.turn}] ${txt}`;
+  box.appendChild(div);
+  box.scrollTop = box.scrollHeight;
+  if(box.children.length>120){ box.removeChild(box.firstChild); }
+}
+
+/* ============ 渲染 ============ */
+function cardHtml(card, opts){
+  opts = opts||{};
+  const el = ECOLOR[card.element]||"#888";
+  let name = card.name;
+  let extra = "";
+  if(card.broken){ name = card.name+"·破封"; }
+  if(card.sealedFlags && card.sealedFlags[card.id]){ extra = `<span style="color:#8A7B5E;font-size:10px;margin-left:4px;">已镇封</span>`; }
+  const atk = card.atk + (opts.atkMod||0);
+  const hp = card.hp;
+  const skillTxt = card.skill ? `「${card.skill.name}」${card.skill.cost}破势` : "";
+  return `<div class="card${card.broken?" broken":""}${opts.extraCls||""}" ${opts.attr||""}>
+    <div class="cname"><span class="element-tag" style="background:${el};">${card.element}</span>${name}${extra}</div>
+    <div class="cmeta">${card.cost}费 · ${card.aura||"神器"}${card.broken?` · ${skillTxt}`:""}</div>
+    ${card.kind==="creature"?
+      `<div class="ceffect">${card.effect?card.effect.desc:"—"}${card.broken?`<br>破势技：${card.skill?card.skill.desc:""}`:""}</div>
+       <div class="stats"><span class="stat atk">攻${atk}</span><span class="stat hp">命${hp}</span>${card.broken?`<span class="stat" style="color:#A63244;">狂性</span>`:""}</div>`:
+      `<div class="ceffect">${card.effect?card.effect.desc:"—"}</div>`}
+  </div>`;
+}
+function renderField(sideEl, side, isPlayer){
+  const holder = document.getElementById(sideEl);
+  holder.innerHTML = "";
+  side.field.forEach((s,idx)=>{
+    const slot = document.createElement("div");
+    slot.className = "slot" + (s?" occupied":"");
+    if(!s){
+      slot.innerHTML = `<div class="slot-tag">灵位 ${idx+1}</div>`;
+      if(!isPlayer){ slot.addEventListener("click", ()=> onEnemySlotClick(idx)); }
+    } else {
+      const auraMod = isPlayer ? (auraXiong(side)?1:0) : (auraXiong(side)?1:0);
+      const atkMod = auraMod + (s.skillBonus||0) + (s.turnAtkBuff||0);
+      let flags = [];
+      if(s.attacked) flags.push("已攻击");
+      if(s.frozen) flags.push("冻结");
+      if(s.tauntTurn) flags.push("守护");
+      slot.innerHTML = cardHtml(s, {atkMod}) + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
+      slot.dataset.slotIdx = idx;
+      slot.addEventListener("click", ()=> isPlayer ? onMySlotClick(idx) : onEnemySlotClick(idx));
+    }
+    holder.appendChild(slot);
+  });
+}
+function renderHand(){
+  const area = document.getElementById("myHandArea");
+  const hint = document.getElementById("handHint");
+  area.innerHTML = "";
+  G.player.hand.forEach((cid,hi)=>{
+    const card = CARDS.find(c=>c.id===cid);
+    const playable = card.cost <= G.player.mana;
+    const div = document.createElement("div");
+    div.className = "card" + (playable?" playable":" notplay") + (ui.selCard===cid?" selected":"");
+    div.innerHTML = cardHtml(card, {});
+    div.style.cursor = playable?"pointer":"not-allowed";
+    div.addEventListener("click", ()=>{ if(G.active!=="player"||G.ended) return; onHandClick(hi, playable); });
+    area.appendChild(div);
+  });
+  hint.textContent = G.active==="player" ? `灵气 ${G.player.mana}/${G.player.manaCap} · 手牌 ${G.player.hand.length}` : "敌方回合…";
+}
+function renderMeters(){
+  const set=(id,txt)=>document.getElementById(id).textContent=txt;
+  set("myHp",G.player.hp); set("aiHp",G.ai.hp); set("myMana",G.player.mana); set("aiMana",G.ai.mana);
+  set("myPoshi",G.player.poshi); set("aiPoshi",G.ai.poshi); set("myHand",G.player.hand.length); set("aiHand",G.ai.hand.length);
+  document.getElementById("myHpBar").style.width=(G.player.hp/CFG.hp*100)+"%";
+  document.getElementById("aiHpBar").style.width=(G.ai.hp/CFG.hp*100)+"%";
+  document.getElementById("myPoshiBar").style.width=(G.player.poshi/CFG.poshiCap*100)+"%";
+  document.getElementById("aiPoshiBar").style.width=(G.ai.poshi/CFG.poshiCap*100)+"%";
+  document.getElementById("turnTag").textContent = `回合 ${G.turn} · ${G.active==="player"?"你的回合":"敌方回合"}`;
+  document.getElementById("myDeckInfo").textContent = `· 牌库 ${G.player.deck.length}`;
+  document.getElementById("aiDeckInfo").textContent = `· 牌库 ${G.ai.deck.length}`;
+}
+function renderAll(){
+  renderMeters();
+  renderField("myField", G.player, true);
+  renderField("aiField", G.ai, false);
+  renderHand();
+  renderActionBar();
+  renderDebug();
+}
+function renderActionBar(){
+  const bar = document.getElementById("actionBar");
+  const hint = document.getElementById("actionHint");
+  // 重建按钮（保留结束回合）
+  const keep = bar.querySelector(".primary");
+  bar.innerHTML = "";
+  const endBtn = document.createElement("button");
+  endBtn.className = "btn primary"; endBtn.textContent="结束回合";
+  endBtn.onclick = ()=>{ if(G.active==="player") endTurn(); };
+  endBtn.disabled = G.active!=="player"||G.ended;
+  bar.appendChild(endBtn);
+
+  if(G.active!=="player"||G.ended){ hint.textContent="等待中…"; return; }
+  if(ui.mode==="attack"){
+    hint.textContent = "选择攻击目标：敌方灵位神兽或敌方本源（点击本源条右侧攻击按钮）";
+    const hpBtn = document.createElement("button");
+    hpBtn.className="btn small"; hpBtn.textContent="攻击敌方本源";
+    hpBtn.onclick=()=>{ const s=G.player.field[ui.selField]; if(s){ attackExec(G.player, s, null, null, effAtk(s)); uiReset(); renderAll(); } };
+    bar.appendChild(hpBtn);
+    const cancel=document.createElement("button"); cancel.className="btn small"; cancel.textContent="取消";
+    cancel.onclick=()=>{ uiReset(); renderAll(); };
+    bar.appendChild(cancel);
+  } else if(ui.selField!==null && G.player.field[ui.selField]){
+    const s = G.player.field[ui.selField];
+    hint.textContent = `${s.name}：选择操作`;
+    const atkBtn=document.createElement("button"); atkBtn.className="btn"; atkBtn.textContent="攻击";
+    atkBtn.disabled = s.attacked||s.frozen;
+    atkBtn.onclick=()=>{ if(!(s.attacked||s.frozen)){ ui.mode="attack"; renderActionBar(); } };
+    bar.appendChild(atkBtn);
+    if(canBreak(G.player, ui.selField)){
+      const brBtn=document.createElement("button"); brBtn.className="btn"; brBtn.textContent=`破封（${breakCost(s.cost)}破势）`;
+      brBtn.disabled = G.player.poshi < breakCost(s.cost);
+      brBtn.onclick=()=>{ doBreak(G.player, ui.selField); };
+      bar.appendChild(brBtn);
+    }
+    if(s.broken && s.skill && !s.skillUsed){
+      const skBtn=document.createElement("button"); skBtn.className="btn"; skBtn.textContent=`破势技·${s.skill.name}（${s.skill.cost}）`;
+      skBtn.disabled = G.player.poshi < s.skill.cost;
+      skBtn.onclick=()=>{
+        if(["damage","freeze","enemyAtkDown","destroyLe3"].includes(s.skill.type)){
+          ui.mode="skill"; ui.pending={caster:ui.selField}; hint.textContent=`选择「${s.skill.name}」目标`; renderActionBar();
+        } else {
+          skillEffect(G.player, s, null);
+        }
+      };
+      bar.appendChild(skBtn);
+    }
+    if(s.broken){
+      const sealNote = document.createElement("span");
+      sealNote.className="hint"; sealNote.textContent="（狂性：本回合未造成伤害则回合结束本源−1）";
+      bar.appendChild(sealNote);
+    }
+    const cancel=document.createElement("button"); cancel.className="btn small"; cancel.textContent="取消选择";
+    cancel.onclick=()=>{ uiReset(); renderAll(); };
+    bar.appendChild(cancel);
+  } else if(ui.selCard){
+    const card = CARDS.find(c=>c.id===ui.selCard);
+    if(card.kind==="creature"){
+      hint.textContent = `${card.name}：选择灵位部署`;
+      const free = G.player.field.map((s,i)=>s?null:i).filter(i=>i!==null);
+      free.forEach(idx=>{
+        const b=document.createElement("button"); b.className="btn small"; b.textContent=`部署到灵位${idx+1}`;
+        b.onclick=()=>{ playCreature(G.player, card, idx); uiReset(); renderAll(); };
+        bar.appendChild(b);
+      });
+    } else {
+      hint.textContent = `${card.name}：选择目标`;
+      if(card.effect.target==="enemyCreature"){
+        ui.mode="artifact"; ui.pending={card:ui.selCard};
+        hint.textContent="选择目标：敌方神兽";
+      } else if(card.effect.target==="ownCreature"){
+        ui.mode="artifactOwn"; ui.pending={card:ui.selCard};
+        hint.textContent="选择目标：友方神兽";
+      } else {
+        const b=document.createElement("button"); b.className="btn"; b.textContent=`使用（本源目标）`;
+        b.onclick=()=>{ G.player.mana-=card.cost; G.player.hand.splice(G.player.hand.indexOf(card.id),1); artifactEffect(card, null, "player"); uiReset(); renderAll(); };
+        bar.appendChild(b);
+      }
+    }
+    const cancel=document.createElement("button"); cancel.className="btn small"; cancel.textContent="取消";
+    cancel.onclick=()=>{ uiReset(); renderAll(); };
+    bar.appendChild(cancel);
+  } else {
+    hint.textContent="点击手牌部署神兽 / 点击我方神兽操作";
+  }
+}
+function effAtk(s){
+  return s.atk + (s.skillBonus||0) + (s.turnAtkBuff||0) + (auraXiong(G.player)?1:0);
+}
+function onHandClick(hi, playable){
+  if(!playable){ logMsg("灵气不足。","s"); return; }
+  ui.selCard = G.player.hand[hi];
+  ui.selField = null; ui.mode="idle";
+  renderHand(); renderActionBar();
+}
+function onMySlotClick(idx){
+  if(G.active!=="player"||G.ended) return;
+  const s = G.player.field[idx];
+  if(!s) return;
+  if(ui.mode==="artifactOwn"){
+    const card = CARDS.find(c=>c.id===ui.pending.card);
+    G.player.mana-=card.cost; G.player.hand.splice(G.player.hand.indexOf(card.id),1);
+    artifactEffect(card, idx, "player"); uiReset(); renderAll(); return;
+  }
+  ui.selField = idx; ui.selCard=null; ui.mode="idle";
+  renderAll();
+}
+function onEnemySlotClick(idx){
+  if(G.active!=="player"||G.ended) return;
+  const t = G.ai.field[idx];
+  if(ui.mode==="attack"){
+    if(!t){ logMsg("目标为空。","s"); return; }
+    const s = G.player.field[ui.selField];
+    if(!s){ uiReset(); renderAll(); return; }
+    attackExec(G.player, s, G.ai, idx, effAtk(s));
+    uiReset(); renderAll(); return;
+  }
+  if(ui.mode==="skill"){
+    const s = G.player.field[ui.pending.caster];
+    if(!s){ uiReset(); renderAll(); return; }
+    if(!t){ logMsg("目标为空。","s"); return; }
+    skillEffect(G.player, s, idx);
+    uiReset(); renderAll(); return;
+  }
+  if(ui.mode==="artifact"){
+    if(!t){ logMsg("目标为空。","s"); return; }
+    const card = CARDS.find(c=>c.id===ui.pending.card);
+    G.player.mana-=card.cost; G.player.hand.splice(G.player.hand.indexOf(card.id),1);
+    artifactEffect(card, idx, "player"); uiReset(); renderAll(); return;
+  }
+}
+function uiReset(){ ui.selCard=null; ui.selField=null; ui.mode="idle"; ui.pending={}; }
+
+/* ============ 调试面板 ============ */
+function toggleHelp(){ const b=document.getElementById("helpBox"); b.open=!b.open; }
+function toggleDebug(){ const b=document.getElementById("debugBox"); b.open=!b.open; }
+function syncCfgInputs(){
+  document.getElementById("cfgPoshiPer").value=CFG.poshiPer;
+  document.getElementById("cfgCB").value=CFG.counterBonus;
+  document.getElementById("cfgCP").value=CFG.counterPenalty;
+  document.getElementById("cfgPC").value=CFG.poshiCap;
+  document.getElementById("cfgRage").value=CFG.rageDamage;
+  document.getElementById("cfgBM").value=CFG.breakMid;
+}
+function applyCfg(){
+  CFG.poshiPer=Math.max(1,+document.getElementById("cfgPoshiPer").value||3);
+  CFG.counterBonus=Math.max(0,+document.getElementById("cfgCB").value||1);
+  CFG.counterPenalty=Math.max(0,+document.getElementById("cfgCP").value||1);
+  CFG.poshiCap=Math.max(4,+document.getElementById("cfgPC").value||10);
+  CFG.rageDamage=Math.max(0,+document.getElementById("cfgRage").value||1);
+  CFG.breakMid=Math.max(2,+document.getElementById("cfgBM").value||5);
+  logMsg("调试参数已应用（仅影响本局后续结算）。","s");
+  renderAll();
+}
+function resetCfg(){ CFG=Object.assign({},DEFAULT_CFG); syncCfgInputs(); logMsg("参数恢复默认。","s"); renderAll(); }
+function renderDebug(){
+  const el=document.getElementById("debugStats");
+  if(!el) return;
+  el.innerHTML =
+    `<b>验证统计：</b>破封 ${G.stats.breaks} 次（目标场均 2–3）｜ 克制攻击 ${G.stats.counterAttacks}/${G.stats.attacks} 次（${G.stats.attacks?Math.round(G.stats.counterAttacks/G.stats.attacks*100):0}%，目标 ≥40%）｜ 狂性 ${G.stats.raged} 次｜ 破势技 ${G.stats.skills} 次｜ 回合 ${G.turn}`;
+}
+
+/* ============ 启动 ============ */
+newGame();
+syncCfgInputs();
+</script>
+</body>
+</html>
