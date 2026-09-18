@@ -57,7 +57,7 @@
   .stat.cost{color:var(--accent);}
   .element-tag{display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; border-radius:50%; color:#FFF; font-size:11px; font-weight:700; margin-right:3px;}
 
-  .hand{display:flex; gap:8px; overflow-x:auto; padding:6px 2px; min-height:110px;}
+  .hand{display:flex; gap:8px; overflow-x:auto; padding:6px 2px; min-height:265px;}
   .hand .card{min-width:118px; max-width:132px; flex:0 0 auto;}
   .hand .card.playable{border-color:#3D2F5C;}
   .hand .card.notplay{opacity:.55;}
@@ -87,8 +87,13 @@
   .turn-tag{font-weight:700; font-size:14px; color:#3D2F5C;}
 
   /* ===== 卡面插画 ===== */
-  .card{display:flex; flex-direction:column; gap:2px;}
-  .card-art{width:100%; height:64px; object-fit:cover; border-radius:6px; margin-bottom:2px; border:1px solid var(--line); background:#EFEBDE;}
+  .card{display:flex; flex-direction:column; gap:3px;}
+  .card-art{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:6px; border:1px solid var(--line); background:#EFEBDE; display:block;}
+  .card .cinfo{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  /* 战场灵位卡：图在左（完整竖图）、文字在右 */
+  .slot .card{flex-direction:row; align-items:stretch; gap:8px;}
+  .slot .card .card-art{width:88px; height:118px; flex:0 0 auto; aspect-ratio:auto;}
+  .slot .card .cinfo{flex:1 1 auto;}
 
   /* ===== 战斗动画（表现层） ===== */
   .slot{position:relative;}
@@ -808,12 +813,14 @@ function cardHtml(card, opts){
   const skillTxt = card.skill ? `「${card.skill.name}」${card.skill.cost}破势` : "";
   return `<div class="card${card.broken?" broken":""}${opts.extraCls||""}" ${opts.attr||""}>
     ${ART[card.id]?`<img class="card-art" src="${ART[card.id]}" alt="">`:""}
+    <div class="cinfo">
     <div class="cname"><span class="element-tag" style="background:${el};">${card.element}</span>${name}${extra}</div>
     <div class="cmeta">${card.cost}费 · ${card.aura||"神器"}${card.broken?` · ${skillTxt}`:""}</div>
     ${card.kind==="creature"?
       `<div class="ceffect">${card.effect?card.effect.desc:"—"}${card.broken?`<br>破势技：${card.skill?card.skill.desc:""}`:""}</div>
        <div class="stats"><span class="stat atk">攻${atk}</span><span class="stat hp">命${hp}</span>${card.broken?`<span class="stat" style="color:#A63244;">狂性</span>`:""}</div>`:
       `<div class="ceffect">${card.effect?card.effect.desc:"—"}</div>`}
+    </div>
   </div>`;
 }
 function renderField(sideEl, side, isPlayer){
