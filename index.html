@@ -893,7 +893,7 @@ function renderActionBar(){
     hint.textContent = "选择攻击目标：敌方灵位神兽或敌方本源（点击本源条右侧攻击按钮）";
     const hpBtn = document.createElement("button");
     hpBtn.className="btn small"; hpBtn.textContent="攻击敌方本源";
-    hpBtn.onclick=()=>{ const s=G.player.field[ui.selField]; if(s){ attackExec(G.player, s, null, null, effAtk(s)); uiReset(); renderAll(); } };
+    hpBtn.onclick=()=>{ const s=G.player.field[ui.selField]; if(s){ attackExec(G.player, s, "hp", null, effAtk(s)); uiReset(); renderAll(); } };
     bar.appendChild(hpBtn);
     const cancel=document.createElement("button"); cancel.className="btn small"; cancel.textContent="取消";
     cancel.onclick=()=>{ uiReset(); renderAll(); };
