@@ -13,7 +13,11 @@
   }
   *{box-sizing:border-box; margin:0; padding:0;}
   body{font-family:"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif; background:linear-gradient(160deg,#F4F1E8 0%,#E8E2D2 100%); color:var(--ink); min-height:100vh; padding:10px;}
-  .wrap{max-width:1060px; margin:0 auto;}
+  .wrap{max-width:1260px; margin:0 auto;}
+  .layout{display:grid; grid-template-columns:1fr 304px; gap:14px; align-items:start;}
+  .main-col{display:flex; flex-direction:column; min-width:0;}
+  .side-col{position:sticky; top:12px; display:flex; flex-direction:column;}
+  .side-col .zone{margin-bottom:0;}
   header{text-align:center; padding:8px 0 4px;}
   header h1{font-size:26px; letter-spacing:6px; color:#3D2F5C;}
   header .sub{font-size:12px; color:var(--sub); margin-top:2px;}
@@ -58,13 +62,14 @@
   .element-tag{display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; border-radius:50%; color:#FFF; font-size:11px; font-weight:700; margin-right:3px;}
 
   .hand{display:flex; gap:8px; overflow-x:auto; padding:6px 2px; min-height:265px;}
-  .hand .card{min-width:118px; max-width:132px; flex:0 0 auto;}
+  .hand .card{min-width:126px; max-width:142px; flex:0 0 auto;}
   .hand .card.playable{border-color:#3D2F5C;}
   .hand .card.notplay{opacity:.55;}
 
   .actionbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap; min-height:38px;}
   .hint{font-size:12px; color:var(--sub);}
   .logbox{height:120px; overflow-y:auto; font-size:12px; line-height:1.6; background:#FFFDF6; border:1px solid var(--line); border-radius:8px; padding:6px 10px;}
+  .log-zone .logbox{height:calc(100vh - 176px); min-height:430px;}
   .logbox .lg-e{color:var(--bad);}
   .logbox .lg-g{color:var(--good);}
   .logbox .lg-p{color:var(--accent);}
@@ -92,7 +97,7 @@
   .card .cinfo{display:flex; flex-direction:column; gap:2px; min-width:0;}
   /* 战场灵位卡：图在左（完整竖图）、文字在右 */
   .slot .card{flex-direction:row; align-items:stretch; gap:8px;}
-  .slot .card .card-art{width:88px; height:118px; flex:0 0 auto; aspect-ratio:auto;}
+  .slot .card .card-art{width:104px; height:139px; flex:0 0 auto; aspect-ratio:auto;}
   .slot .card .cinfo{flex:1 1 auto;}
 
   /* ===== 战斗动画（表现层） ===== */
@@ -122,6 +127,11 @@
   .burst{position:absolute; inset:0; border-radius:10px; border:3px solid rgba(201,162,39,.95); pointer-events:none; animation:burstring .7s ease forwards; z-index:8;}
   .turn-banner{position:fixed; top:14px; left:50%; transform:translate(-50%,0); background:rgba(61,47,92,.93); color:#FFF; padding:10px 24px; border-radius:30px; font-size:16px; letter-spacing:2px; z-index:60; animation:turnbanner 1.4s ease forwards; pointer-events:none; box-shadow:0 4px 16px rgba(0,0,0,.32);}
 
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;}
+    .side-col{position:static;}
+    .log-zone .logbox{height:150px; min-height:150px;}
+  }
   @media (max-width:640px){
     .slot{min-height:80px;}
     .hand .card{min-width:104px;}
@@ -145,6 +155,9 @@
     <button class="btn small alert" onclick="restartGame()">重新开局</button>
   </div>
 </div>
+
+<div class="layout">
+<div class="main-col">
 
 <details class="help" id="helpBox" open>
   <summary>操作说明（一屏速览）</summary>
@@ -189,10 +202,15 @@
   <div class="hint" id="actionHint" style="margin-top:6px;">点击手牌或神兽开始操作</div>
 </div>
 
-<div class="zone">
+</div><!-- /main-col -->
+
+<div class="side-col">
+<div class="zone log-zone">
   <div class="zone-title">对战日志</div>
   <div class="logbox" id="logBox"></div>
 </div>
+</div><!-- /side-col -->
+</div><!-- /layout -->
 
 <details class="debug" id="debugBox">
   <summary>调试面板 · 参数与验证数据</summary>
