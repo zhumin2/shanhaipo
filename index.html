@@ -137,6 +137,14 @@
     .hand .card{min-width:104px;}
     .meter .bar{width:80px;}
   }
+
+  /* ===== 模式菜单 ===== */
+  .modemenu{position:fixed; inset:0; background:rgba(20,16,28,.82); display:flex; align-items:center; justify-content:center; z-index:80;}
+  .modebox{background:var(--card); border-radius:16px; padding:26px 34px; text-align:center; max-width:460px; width:92%; max-height:90vh; overflow-y:auto;}
+  .modebox h2{font-size:22px; margin-bottom:14px; letter-spacing:4px; color:#3D2F5C;}
+  .modebox .btn{display:block; width:100%; margin:8px 0; font-size:15px;}
+  .modebox hr{border:none; border-top:1px solid var(--line); margin:12px 0;}
+  .modebox textarea{width:100%; height:60px; font-size:10px; font-family:Consolas,monospace; margin:5px 0; resize:vertical; border:1px solid var(--line); border-radius:6px; padding:4px;}
 </style>
 </head>
 <body>
@@ -144,12 +152,13 @@
 
 <header>
   <h1>山海破</h1>
-  <div class="sub">P0 可玩原型 · 规则集 SHANHAIPO-001 · v1.0</div>
+  <div class="sub">可玩原型 · 规则集 SHANHAIPO-003 · v1.2（打AI / 同屏双人 / 在线对战）</div>
 </header>
 
 <div class="topbar">
   <div class="turn-tag" id="turnTag">回合 1 · 你的回合</div>
   <div>
+    <button class="btn small" onclick="openMenu()">模式</button>
     <button class="btn small" onclick="toggleHelp()">操作说明</button>
     <button class="btn small" onclick="toggleDebug()">调试面板</button>
     <button class="btn small alert" onclick="restartGame()">重新开局</button>
@@ -166,12 +175,13 @@
   ③ <b>狂性</b>：破封神兽本回合未造成伤害，回合结束你的本源 −1。<b>镇封</b>：对方破封随从被神器/效果翻回封印态后，本局不可再破封。<br>
   ④ <b>五行</b>：金克木克土克水克火克金，克制 +1、被克 −1（最低 1）。<b>破势</b>：每造成 3 点伤害 +1（上限 10）。<br>
   ⑤ 祥瑞羁绊（场上祥瑞≥2）：回合开始本源+1；凶煞羁绊（场上凶煞≥2）：我方神兽攻击+1。<br>
-  ⑥ 击破对方 30 点本源获胜；30 回合未分胜负按本源判定。
+  ⑥ 击破对方 30 点本源获胜；30 回合未分胜负按本源判定。<br>
+  ⑦ 防御：神兽攻击对方本源时，被攻击方场上有存活神兽可点其挺身防御（代为承受伤害，五行克制照常结算）；也可放弃防御。<br>  ⑧ 模式：顶部「模式」按钮切换 —— 打AI / 同屏双人（1P下方 2P上方 轮流操作）/ 在线对战（连接码 P2P 直连）。
 </details>
 
 <!-- 敌方 -->
 <div class="zone">
-  <div class="zone-title">敌方（AI）<span id="aiDeckInfo" style="font-weight:400;"></span></div>
+  <div class="zone-title"><span id="aiZoneTitle">敌方（AI）</span><span id="aiDeckInfo" style="font-weight:400;"></span></div>
   <div class="meters">
     <div class="meter"><span class="label">山海本源</span><div class="bar"><div class="fill" id="aiHpBar" style="background:var(--bad);"></div></div><b id="aiHp">30</b><span style="color:var(--sub);font-size:11px;">/30</span></div>
     <div class="meter"><span class="label">灵气</span><b id="aiMana">1</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
@@ -183,7 +193,7 @@
 
 <!-- 我方 -->
 <div class="zone">
-  <div class="zone-title">你的战场<span id="myDeckInfo" style="font-weight:400;"></span></div>
+  <div class="zone-title"><span id="myZoneTitle">你的战场</span><span id="myDeckInfo" style="font-weight:400;"></span></div>
   <div class="meters">
     <div class="meter"><span class="label">山海本源</span><div class="bar"><div class="fill" id="myHpBar" style="background:var(--good);"></div></div><b id="myHp">30</b><span style="color:var(--sub);font-size:11px;">/30</span></div>
     <div class="meter"><span class="label">灵气</span><b id="myMana">1</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
@@ -194,7 +204,7 @@
 </div>
 
 <div class="zone">
-  <div class="zone-title">手牌 <span id="handHint" class="hint"></span></div>
+  <div class="zone-title"><span id="handTitle">手牌</span> <span id="handHint" class="hint"></span></div>
   <div class="hand" id="myHandArea"></div>
   <div class="actionbar" id="actionBar">
     <button class="btn primary" onclick="endTurn()">结束回合</button>
@@ -230,6 +240,26 @@
 
 </div>
 
+<div class="modemenu" id="modeMenu">
+  <div class="modebox">
+    <h2>山海破 · 选择模式</h2>
+    <button class="btn" onclick="startMode('ai')">打 AI（单人）</button>
+    <button class="btn" onclick="startMode('hotseat')">同屏双人（热座）</button>
+    <hr>
+    <button class="btn" onclick="startPvp('p1')">在线对战 · 发起（1P 先手）</button>
+    <button class="btn" onclick="startPvp('p2')">在线对战 · 加入（2P 后手）</button>
+    <div id="pvpPanel" style="display:none; margin-top:10px; text-align:left;">
+      <div class="hint" id="pvpStep" style="line-height:1.6;"></div>
+      <textarea id="offerOut" readonly placeholder="连接码（发给对方）"></textarea>
+      <textarea id="offerIn" placeholder="粘贴对方连接码"></textarea>
+      <textarea id="answerOut" readonly placeholder="应答码（发给对方）"></textarea>
+      <textarea id="answerIn" placeholder="粘贴对方应答码"></textarea>
+      <div id="pvpBtns" style="text-align:center;"></div>
+    </div>
+    <button class="btn small" onclick="closeMenu()" style="margin-top:10px;">关闭（继续当前对局）</button>
+  </div>
+</div>
+
 <div class="endbanner" id="endBanner" style="display:none;">
   <div class="endbox">
     <h2 id="endTitle">胜</h2>
@@ -241,9 +271,13 @@
 
 <script>
 "use strict";
+/* ============ 确定性随机（PvP 双方同步洗牌用） ============ */
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+let RNG = Math.random;
+function seedRNG(seed){ RNG = mulberry32(seed); }
 /* ============ 规则集配置（与 design-contract.json 一致） ============ */
 const DEFAULT_CFG = {
-  ruleset_id: "SHANHAIPO-001",
+  ruleset_id: "SHANHAIPO-003",
   hp: 30, manaCap: 10, handCap: 10,
   poshiCap: 10, poshiPer: 3,
   breakLow: 3, breakMid: 5, breakHigh: 7,   // 按费用 1-2 / 3-4 / 5+
@@ -301,9 +335,15 @@ function newSide(deck){
     brokenFlags: {}, sealedFlags: {},
   };
 }
-function newGame(){
+function newGame(mode, role, seed){
+  const sd = seed || (Math.floor(Math.random()*1e9));
+  seedRNG(sd);
+  const keepPeer = G && G.peer ? G.peer : null;
+  const keepWaiting = G && G.waitingPeer ? G.waitingPeer : false;
   G = {
     turn: 1, active: "player", ended: false, winner: null,
+    mode: mode||"ai", role: role||"p1", seed: sd,
+    peer: keepPeer, waitingPeer: keepWaiting,
     player: newSide(CARDS.map(c=>c.id)),
     ai: newSide(CARDS.map(c=>c.id)),
     stats: {breaks:0, counterAttacks:0, attacks:0, raged:0, sealed:0, skills:0, mulligan:0},
@@ -311,10 +351,41 @@ function newGame(){
   };
   for(let i=0;i<3;i++){ G.player.hand.push(G.player.deck.pop()); }
   for(let i=0;i<3;i++){ G.ai.hand.push(G.ai.deck.pop()); }
+  hideMenu(); hideEnd();
   renderAll();
-  logMsg("对局开始：你的回合（先手）。点击手牌部署神兽。","s");
+  if(G.mode==="ai"){ logMsg("对局开始：你的回合（先手）。点击手牌部署神兽。","s"); }
+  else if(G.mode==="hotseat"){ logMsg("对局开始：1P（下方）先手。回合结束自动轮到 2P（上方）。","s"); }
+  else { logMsg("对局开始：你"+(G.role==="p1"?"（1P）先手":"（2P）后手")+"，点击手牌部署神兽。","s"); }
 }
-function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+/* ============ 模式与对局方（SHANHAIPO-003） ============ */
+function mySide(){
+  if(G.mode==="pvp") return G.role==="p1"?G.player:G.ai;
+  if(G.mode==="hotseat") return G.active==="player"?G.player:G.ai;
+  return G.player;
+}
+function oppSide(){ return mySide()===G.player?G.ai:G.player; }
+function sideName(side){ return side===G.player?"1P":"2P"; }
+function sideLabel(side){
+  if(G.mode==="ai") return side===G.player?"你":"AI";
+  return sideName(side);
+}
+function canActNow(){
+  if(G.ended) return false;
+  if(G.mode==="pvp") return G.role==="p1"?G.active==="player":G.active==="ai";
+  if(G.mode==="hotseat") return true;
+  return G.active==="player";
+}
+function closeMenu(){ if(G && G.player){ hideMenu(); } }
+function startMode(m){ newGame(m, "p1"); }
+function pvpSend(obj){
+  if(G.mode==="pvp" && G.peer && G.peer.readyState==="open"){ try{ G.peer.send(JSON.stringify(obj)); }catch(e){} }
+}
+function pvpAct(a){ pvpSend({t:"act", a:Object.assign({}, a, {role:G.role})}); }
+function localSide(role){
+  if(G.mode==="pvp") return role==="p1"?G.player:G.ai;
+  return role==="ai"?G.ai:G.player;
+}
+function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(RNG()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function draw(side,n){
   for(let i=0;i<n;i++){
     if(side.deck.length===0){ damageHpRaw(side,1,"疲乏"); logMsg("牌库已空，抽牌受到 1 点疲乏伤害。","e"); continue; }
@@ -455,15 +526,31 @@ function startTurn(side){
   // 神农鼎等进场效果在部署时处理；回合开始重置临时增益
 }
 function endTurn(){
-  if(G.ended || G.active!=="player") return;
-  settleEnd(G.player);
+  if(G.ended || !canActNow()) return;
+  if(G.mode==="pvp"){
+    pvpAct({t:"endturn"});
+  }
+  if(G.mode==="ai"){
+    settleEnd(G.player);
+    if(G.ended) return;
+    G.active = "ai"; G.turn++;
+    if(G.turn > CFG.maxTurns){ finalByTurns(); return; }
+    renderAll();
+    logMsg(`—— 回合 ${G.turn}：敌方回合 ——`,"s");
+    animTurn(`敌方回合 ${G.turn}`);
+    setTimeout(aiTurn, 350);
+    return;
+  }
+  const cur = G.active==="player"?G.player:G.ai;
+  settleEnd(cur);
   if(G.ended) return;
-  G.active = "ai"; G.turn++;
+  G.active = cur===G.player?"ai":"player";
+  G.turn++;
   if(G.turn > CFG.maxTurns){ finalByTurns(); return; }
+  const nxt = G.active==="player"?G.player:G.ai;
+  startTurn(nxt);
   renderAll();
-  logMsg(`—— 回合 ${G.turn}：敌方回合 ——`,"s");
-  animTurn(`敌方回合 ${G.turn}`);
-  setTimeout(aiTurn, 350);
+  logMsg(`—— 回合 ${G.turn}：${sideLabel(nxt)} 的回合 ——`,"s"); animTurn(`${sideLabel(nxt)} 回合 ${G.turn}`);
 }
 function settleEnd(side){
   // 狂性反噬
@@ -582,6 +669,8 @@ function playCreature(side, card, slotIdx){
     effect:card.effect, skill:card.skill, broken:false, attacked:false, frozen:false, skillUsed:false, skillBonus:0, turnAtkBuff:0, didDamageThisTurn:false };
   side.field[slotIdx] = s;
   side.mana -= card.cost;
+  const _hi = side.hand.indexOf(card.id);
+  if(_hi>=0){ side.hand.splice(_hi,1); }
   // 进场效果
   if(card.effect && card.effect.type==="onEnter"){
     if(card.effect.fx==="peek"){
@@ -659,39 +748,118 @@ function aiTurn(){
       doBreak(ai, idx);
     }
   });
-  // 4. 攻击（优先克制目标）
+  // 4. 攻击（队列化：打本源时若玩家场上有神兽，暂停等玩家防御）
+  aiAtkQueue = [];
   ai.field.forEach(s=>{
     if(G.ended || !s || s.attacked || s.frozen) return;
-    const atk = s.atk + (s.skillBonus||0) + (s.turnAtkBuff||0);
-    if(atk<=0) { s.attacked=true; return; }
-    const ts = fieldCreatures(pl);
-    // 有守护目标则必须打守护
-    const taunt = ts.filter(t=>t.tauntTurn);
-    let target = null;
-    const pool = taunt.length?taunt:ts;
-    if(pool.length>0){
-      // 找克制目标
-      target = pool.find(t=>COUNTER[s.element]===t.element);
-      if(!target){ target = pool.slice().sort((a,b)=>b.atk-a.atk)[0]; }
-      const idx = pl.field.indexOf(target);
-      attackExec(ai, s, pl, idx, atk);
-    } else {
-      attackHpExec(ai, s, atk);
-    }
+    const atk = s.atk + (s.skillBonus||0) + (s.turnAtkBuff||0) + (auraXiong(G.ai)?1:0);
+    if(atk<=0){ s.attacked=true; return; }
+    aiAtkQueue.push({s, atk});
   });
-  // 5. 破势技（简单：对敌方随从用伤害技）
-  ai.field.forEach(s=>{
+  aiProcessAttacks();
+}
+
+/* ===== 防御机制（SHANHAIPO-002）：攻击本源时被攻击方可派神兽阻挡 ===== */
+var aiAtkQueue = [];
+function aiProcessAttacks(){
+  if(G.ended) return;
+  while(aiAtkQueue.length>0){
+    const it = aiAtkQueue[0];
+    const ts = fieldCreatures(G.player);
+    const taunt = ts.filter(t=>t.tauntTurn);
+    const pool = taunt.length?taunt:ts;
+    let target = null;
+    if(pool.length>0){
+      // 有克制目标必打；无克制时能击杀最强神兽则清场，否则抢血打本源（触发玩家防御）
+      target = pool.find(t=>COUNTER[it.s.element]===t.element);
+      if(!target){
+        const strongest = pool.slice().sort((a,b)=>b.atk-a.atk)[0];
+        if(it.atk >= strongest.hp) target = strongest;
+      }
+    }
+    if(target){
+      const idx = G.player.field.indexOf(target);
+      attackExec(G.ai, it.s, G.player, idx, it.atk);
+      aiAtkQueue.shift();
+    } else if(fieldCreatures(G.player).length>0){
+      // 打本源：玩家场上有存活神兽 → 暂停，等玩家选择防御或放弃
+      ui.mode="defend"; ui.pending={s:it.s, atk:it.atk};
+      renderAll();
+      logMsg(`${it.s.name} 即将攻击你的本源！点击我方神兽挺身防御，或放弃防御。`,"e");
+      return;
+    } else {
+      attackHpExec(G.ai, it.s, it.atk);
+      aiAtkQueue.shift();
+    }
+  }
+  aiSkillPhase();
+  aiEndPhase();
+}
+function aiResumeDefend(blockerIdx){
+  if(G.ended) return;
+  const it = aiAtkQueue[0];
+  if(!it){ aiProcessAttacks(); return; }
+  if(blockerIdx===null){
+    attackHpExec(G.ai, it.s, it.atk);
+  } else {
+    const b = G.player.field[blockerIdx];
+    if(b) logMsg(`${b.name} 挺身防御，代为承受攻击。`,"g");
+    attackExec(G.ai, it.s, G.player, blockerIdx, it.atk);
+  }
+  aiAtkQueue.shift();
+  uiReset(); renderAll();
+  aiProcessAttacks();
+}
+function aiPickBlocker(side, atk, attElement){
+  const cands = side.field.map((s,i)=>({s,i})).filter(x=>x.s && x.s.hp>0);
+  if(!cands.length) return null;
+  const dmg = (t)=>{ const m=getCounterMod(attElement, t.element); return Math.max(CFG.minDamage, atk+m); };
+  cands.sort((a,b)=>{
+    const al = a.s.hp>dmg(a.s), bl = b.s.hp>dmg(b.s);
+    if(al!==bl) return al?-1:1;
+    return b.s.atk - a.s.atk;
+  });
+  return cands[0].i;
+}
+function resolveHpAttackBy(attSide, attIdx, blockerIdx){
+  const s = attSide.field[attIdx];
+  if(!s){ uiReset(); renderAll(); return; }
+  const opp = attSide===G.player?G.ai:G.player;
+  if(blockerIdx===null || blockerIdx===undefined){
+    attackHpExec(attSide, s, effAtk(s, attSide));
+  } else {
+    const b = opp.field[blockerIdx];
+    if(b) logMsg(`${b.name} 挺身防御，代为承受攻击。`,"g");
+    attackExec(attSide, s, opp, blockerIdx, effAtk(s, attSide));
+  }
+  uiReset(); renderAll();
+}
+function resolveDefend(blockerIdx){
+  if(ui.pending.hpReq){
+    const attRole=ui.pending.hpReq.attRole, attIdx=ui.pending.hpReq.attIdx;
+    resolveHpAttackBy(localSide(attRole), attIdx, blockerIdx);
+    pvpSend({t:"act", a:{t:"defendRes", attRole:ui.pending.hpReq.attRole, attIdx:attIdx, blockerIdx:blockerIdx, role:G.role}});
+  } else if(ui.pending.hpAtt){
+    resolveHpAttackBy(ui.pending.hpAtt.attSide, ui.pending.hpAtt.attIdx, blockerIdx);
+  } else {
+    aiResumeDefend(blockerIdx);
+  }
+}
+function aiSkillPhase(){
+  if(G.ended) return;
+  G.ai.field.forEach(s=>{
     if(G.ended || !s || !s.broken || s.skillUsed) return;
     const sk = s.skill;
-    if(!sk || ai.poshi < sk.cost) return;
-    if(sk.type==="damage" && fieldCreatures(pl).length>0){
-      const t = fieldCreatures(pl)[0]; const idx = pl.field.indexOf(t);
-      skillEffect(ai, s, idx);
+    if(!sk || G.ai.poshi < sk.cost) return;
+    if(sk.type==="damage" && fieldCreatures(G.player).length>0){
+      const t = fieldCreatures(G.player)[0]; const idx = G.player.field.indexOf(t);
+      skillEffect(G.ai, s, idx);
     } else if(sk.type==="damageHp" || sk.type==="allEnemy"){
-      skillEffect(ai, s, null);
+      skillEffect(G.ai, s, null);
     }
   });
-  // 6. 结束
+}
+function aiEndPhase(){
   if(G.ended) return;
   settleEnd(G.ai);
   if(G.ended) return;
@@ -738,7 +906,8 @@ function showEnd(){
 }
 function hideEnd(){ document.getElementById("endBanner").style.display="none"; }
 function restartGame(){
-  newGame();
+  if(G.mode==="pvp"){ logMsg("在线对局请通过「模式」重新发起连接。","s"); openMenu(); return; }
+  newGame(G.mode, G.role);
   hideEnd();
 }
 
@@ -849,7 +1018,7 @@ function renderField(sideEl, side, isPlayer){
     slot.className = "slot" + (s?" occupied":"");
     if(!s){
       slot.innerHTML = `<div class="slot-tag">灵位 ${idx+1}</div>`;
-      if(!isPlayer){ slot.addEventListener("click", ()=> onEnemySlotClick(idx)); }
+      if(!isPlayer){ slot.addEventListener("click", ()=> onSlotClick(side, idx)); }
     } else {
       const auraMod = isPlayer ? (auraXiong(side)?1:0) : (auraXiong(side)?1:0);
       const atkMod = auraMod + (s.skillBonus||0) + (s.turnAtkBuff||0);
@@ -859,7 +1028,7 @@ function renderField(sideEl, side, isPlayer){
       if(s.tauntTurn) flags.push("守护");
       slot.innerHTML = cardHtml(s, {atkMod}) + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
       slot.dataset.slotIdx = idx;
-      slot.addEventListener("click", ()=> isPlayer ? onMySlotClick(idx) : onEnemySlotClick(idx));
+      slot.addEventListener("click", ()=> onSlotClick(side, idx));
     }
     holder.appendChild(slot);
   });
@@ -867,19 +1036,23 @@ function renderField(sideEl, side, isPlayer){
 function renderHand(){
   const area = document.getElementById("myHandArea");
   const hint = document.getElementById("handHint");
+  const title = document.getElementById("handTitle");
   area.innerHTML = "";
-  G.player.hand.forEach((cid,hi)=>{
+  const me = mySide();
+  const mine = canActNow();
+  title.textContent = mine ? (G.mode==="hotseat" ? `手牌（${sideLabel(me)}）` : "手牌") : "手牌（等待行动方）";
+  me.hand.forEach((cid,hi)=>{
     const card = CARDS.find(c=>c.id===cid);
-    const playable = card.cost <= G.player.mana;
+    const playable = card.cost <= me.mana;
     const wrap = document.createElement("div");
     wrap.innerHTML = cardHtml(card, {});
     const div = wrap.firstChild;
     div.className += (playable?" playable":" notplay") + (ui.selCard===cid?" selected":"");
     div.style.cursor = playable?"pointer":"not-allowed";
-    div.addEventListener("click", ()=>{ if(G.active!=="player"||G.ended) return; onHandClick(hi, playable); });
+    div.addEventListener("click", ()=>{ if(!canActNow()||G.ended) return; onHandClick(hi, playable); });
     area.appendChild(div);
   });
-  hint.textContent = G.active==="player" ? `灵气 ${G.player.mana}/${G.player.manaCap} · 手牌 ${G.player.hand.length}` : "敌方回合…";
+  hint.textContent = mine ? `灵气 ${me.mana}/${me.manaCap} · 手牌 ${me.hand.length}` : (G.mode==="hotseat" ? `等待 ${sideLabel(me)} 操作…` : "等待对方…");
 }
 function renderMeters(){
   const set=(id,txt)=>document.getElementById(id).textContent=txt;
@@ -889,7 +1062,14 @@ function renderMeters(){
   document.getElementById("aiHpBar").style.width=(G.ai.hp/CFG.hp*100)+"%";
   document.getElementById("myPoshiBar").style.width=(G.player.poshi/CFG.poshiCap*100)+"%";
   document.getElementById("aiPoshiBar").style.width=(G.ai.poshi/CFG.poshiCap*100)+"%";
-  document.getElementById("turnTag").textContent = `回合 ${G.turn} · ${G.active==="player"?"你的回合":"敌方回合"}`;
+  const tTag = document.getElementById("turnTag");
+  if(G.mode==="ai"){ tTag.textContent = `回合 ${G.turn} · ${G.active==="player"?"你的回合":"敌方回合"}`; }
+  else if(G.mode==="hotseat"){ tTag.textContent = `回合 ${G.turn} · ${G.active==="player"?"1P 回合":"2P 回合"}`; }
+  else { tTag.textContent = `回合 ${G.turn} · ${G.active==="player"?"你的回合":"对方回合"}`; }
+  const myZT=document.getElementById("myZoneTitle"), aiZT=document.getElementById("aiZoneTitle");
+  if(G.mode==="hotseat"){ myZT.textContent="1P 战场（下方）"; aiZT.textContent="2P 战场（上方）"; }
+  else if(G.mode==="pvp"){ myZT.textContent=G.role==="p1"?"1P 战场（你）":"2P 战场（你）"; aiZT.textContent=G.role==="p1"?"2P 战场（对方）":"1P 战场（对方）"; }
+  else { myZT.textContent="你的战场"; aiZT.textContent="敌方（AI）"; }
   document.getElementById("myDeckInfo").textContent = `· 牌库 ${G.player.deck.length}`;
   document.getElementById("aiDeckInfo").textContent = `· 牌库 ${G.ai.deck.length}`;
 }
@@ -904,46 +1084,76 @@ function renderAll(){
 function renderActionBar(){
   const bar = document.getElementById("actionBar");
   const hint = document.getElementById("actionHint");
-  // 重建按钮（保留结束回合）
-  const keep = bar.querySelector(".primary");
   bar.innerHTML = "";
+  const me = mySide(), opp = oppSide();
+  const mine = canActNow();
   const endBtn = document.createElement("button");
   endBtn.className = "btn primary"; endBtn.textContent="结束回合";
-  endBtn.onclick = ()=>{ if(G.active==="player") endTurn(); };
-  endBtn.disabled = G.active!=="player"||G.ended;
+  endBtn.onclick = ()=>{ if(canActNow()) endTurn(); };
+  endBtn.disabled = !mine||G.ended||G.waitingPeer;
   bar.appendChild(endBtn);
 
-  if(G.active!=="player"||G.ended){ hint.textContent="等待中…"; return; }
+  if(ui.mode==="defend"){
+    hint.textContent = `敌方（${sideLabel(opp)}）神兽来袭：点击己方神兽挺身防御，或放弃防御`;
+    const give=document.createElement("button"); give.className="btn small alert"; give.textContent="放弃防御（本源承受）";
+    give.onclick=()=>{ resolveDefend(null); };
+    bar.appendChild(give);
+    return;
+  }
+  if(G.waitingPeer){ hint.textContent="等待对方选择防御…"; return; }
+  if(!mine||G.ended){ hint.textContent = G.mode==="hotseat" ? `等待 ${sideLabel(me)} 操作…` : "等待中…"; return; }
   if(ui.mode==="attack"){
     hint.textContent = "选择攻击目标：敌方灵位神兽或敌方本源（点击本源条右侧攻击按钮）";
     const hpBtn = document.createElement("button");
     hpBtn.className="btn small"; hpBtn.textContent="攻击敌方本源";
-    hpBtn.onclick=()=>{ const s=G.player.field[ui.selField]; if(s){ attackExec(G.player, s, "hp", null, effAtk(s)); uiReset(); renderAll(); } };
+    hpBtn.onclick=()=>{ const s=me.field[ui.selField]; if(s){
+      const bs = fieldCreatures(opp);
+      if(bs.length>0){
+        if(G.mode==="ai"){
+          resolveHpAttackBy(me, ui.selField, aiPickBlocker(opp, effAtk(s, me), s.element));
+        } else if(G.mode==="hotseat"){
+          ui.mode="defend"; ui.pending={hpAtt:{attSide:me, attIdx:ui.selField}};
+          renderAll(); logMsg(`${s.name} 即将攻击 ${sideLabel(opp)} 本源！由 ${sideLabel(opp)} 选择防御。`,"e");
+        } else {
+          const _ai1 = ui.selField;
+          G.waitingPeer=true; uiReset(); renderAll();
+          pvpAct({t:"hpReq", attIdx:_ai1});
+          logMsg("等待对方选择防御…","s");
+        }
+        return;
+      }
+      const _ai0 = ui.selField;
+      resolveHpAttackBy(me, _ai0, null);
+      if(G.mode==="pvp"){ pvpAct({t:"hpDirect", attIdx:_ai0}); }
+    } };
     bar.appendChild(hpBtn);
     const cancel=document.createElement("button"); cancel.className="btn small"; cancel.textContent="取消";
     cancel.onclick=()=>{ uiReset(); renderAll(); };
     bar.appendChild(cancel);
-  } else if(ui.selField!==null && G.player.field[ui.selField]){
-    const s = G.player.field[ui.selField];
+  } else if(ui.selField!==null && me.field[ui.selField]){
+    const s = me.field[ui.selField];
     hint.textContent = `${s.name}：选择操作`;
     const atkBtn=document.createElement("button"); atkBtn.className="btn"; atkBtn.textContent="攻击";
     atkBtn.disabled = s.attacked||s.frozen;
     atkBtn.onclick=()=>{ if(!(s.attacked||s.frozen)){ ui.mode="attack"; renderActionBar(); } };
     bar.appendChild(atkBtn);
-    if(canBreak(G.player, ui.selField)){
+    if(canBreak(me, ui.selField)){
       const brBtn=document.createElement("button"); brBtn.className="btn"; brBtn.textContent=`破封（${breakCost(s.cost)}破势）`;
-      brBtn.disabled = G.player.poshi < breakCost(s.cost);
-      brBtn.onclick=()=>{ doBreak(G.player, ui.selField); };
+      brBtn.disabled = me.poshi < breakCost(s.cost);
+      brBtn.onclick=()=>{ const _si=ui.selField; doBreak(me, _si); pvpAct({t:"brk", slotIdx:_si}); uiReset(); renderAll(); };
       bar.appendChild(brBtn);
     }
     if(s.broken && s.skill && !s.skillUsed){
       const skBtn=document.createElement("button"); skBtn.className="btn"; skBtn.textContent=`破势技·${s.skill.name}（${s.skill.cost}）`;
-      skBtn.disabled = G.player.poshi < s.skill.cost;
+      skBtn.disabled = me.poshi < s.skill.cost;
       skBtn.onclick=()=>{
         if(["damage","freeze","enemyAtkDown","destroyLe3"].includes(s.skill.type)){
           ui.mode="skill"; ui.pending={caster:ui.selField}; hint.textContent=`选择「${s.skill.name}」目标`; renderActionBar();
         } else {
-          skillEffect(G.player, s, null);
+          const _ci3 = ui.selField;
+          skillEffect(me, s, null);
+          pvpAct({t:"skill", casterIdx:_ci3, targetIdx:null});
+          uiReset(); renderAll();
         }
       };
       bar.appendChild(skBtn);
@@ -960,10 +1170,10 @@ function renderActionBar(){
     const card = CARDS.find(c=>c.id===ui.selCard);
     if(card.kind==="creature"){
       hint.textContent = `${card.name}：选择灵位部署`;
-      const free = G.player.field.map((s,i)=>s?null:i).filter(i=>i!==null);
+      const free = me.field.map((s,i)=>s?null:i).filter(i=>i!==null);
       free.forEach(idx=>{
         const b=document.createElement("button"); b.className="btn small"; b.textContent=`部署到灵位${idx+1}`;
-        b.onclick=()=>{ playCreature(G.player, card, idx); uiReset(); renderAll(); };
+        b.onclick=()=>{ playCreature(me, card, idx); pvpAct({t:"deploy", cardId:card.id, slotIdx:idx}); uiReset(); renderAll(); };
         bar.appendChild(b);
       });
     } else {
@@ -976,7 +1186,7 @@ function renderActionBar(){
         hint.textContent="选择目标：友方神兽";
       } else {
         const b=document.createElement("button"); b.className="btn"; b.textContent=`使用（本源目标）`;
-        b.onclick=()=>{ G.player.mana-=card.cost; G.player.hand.splice(G.player.hand.indexOf(card.id),1); artifactEffect(card, null, "player"); uiReset(); renderAll(); };
+        b.onclick=()=>{ me.mana-=card.cost; me.hand.splice(me.hand.indexOf(card.id),1); artifactEffect(card, null, me===G.player?"player":"ai"); pvpAct({t:"artifact", cardId:card.id, targetIdx:null}); uiReset(); renderAll(); };
         bar.appendChild(b);
       }
     }
@@ -987,51 +1197,72 @@ function renderActionBar(){
     hint.textContent="点击手牌部署神兽 / 点击我方神兽操作";
   }
 }
-function effAtk(s){
-  return s.atk + (s.skillBonus||0) + (s.turnAtkBuff||0) + (auraXiong(G.player)?1:0);
+function effAtk(s, side){
+  side = side || G.player;
+  return s.atk + (s.skillBonus||0) + (s.turnAtkBuff||0) + (auraXiong(side)?1:0);
 }
 function onHandClick(hi, playable){
   if(!playable){ logMsg("灵气不足。","s"); return; }
-  ui.selCard = G.player.hand[hi];
+  ui.selCard = mySide().hand[hi];
   ui.selField = null; ui.mode="idle";
   renderHand(); renderActionBar();
 }
-function onMySlotClick(idx){
-  if(G.active!=="player"||G.ended) return;
-  const s = G.player.field[idx];
-  if(!s) return;
+function onSlotClick(side, idx){
+  if(G.ended) return;
+  const me = mySide();
+  const isMine = side===me;
+  if(ui.mode==="defend"){
+    if(!isMine) return;
+    if(!side.field[idx]) return;
+    resolveDefend(idx);
+    return;
+  }
+  if(!canActNow()) return;
+  if(!isMine){
+    const t = side.field[idx];
+    if(ui.mode==="attack"){
+      if(!t){ logMsg("目标为空。","s"); return; }
+      const s = me.field[ui.selField];
+      if(!s){ uiReset(); renderAll(); return; }
+      const _ai2 = ui.selField;
+      attackExec(me, s, side, idx, effAtk(s, me));
+      pvpAct({t:"atk", attIdx:_ai2, defIdx:idx});
+      uiReset(); renderAll(); return;
+    }
+    if(ui.mode==="skill"){
+      const s = me.field[ui.pending.caster];
+      if(!s){ uiReset(); renderAll(); return; }
+      if(!t){ logMsg("目标为空。","s"); return; }
+      const _ci = ui.pending.caster;
+      skillEffect(me, s, idx);
+      pvpAct({t:"skill", casterIdx:_ci, targetIdx:idx});
+      uiReset(); renderAll(); return;
+    }
+    if(ui.mode==="artifact"){
+      if(!t){ logMsg("目标为空。","s"); return; }
+      const card = CARDS.find(c=>c.id===ui.pending.card);
+      const _ci2 = card.id;
+      me.mana-=card.cost; me.hand.splice(me.hand.indexOf(card.id),1);
+      artifactEffect(card, idx, me===G.player?"player":"ai");
+      pvpAct({t:"artifact", cardId:_ci2, targetIdx:idx});
+      uiReset(); renderAll(); return;
+    }
+    return;
+  }
+  // 我方区域
   if(ui.mode==="artifactOwn"){
     const card = CARDS.find(c=>c.id===ui.pending.card);
-    G.player.mana-=card.cost; G.player.hand.splice(G.player.hand.indexOf(card.id),1);
-    artifactEffect(card, idx, "player"); uiReset(); renderAll(); return;
+    me.mana-=card.cost; me.hand.splice(me.hand.indexOf(card.id),1);
+    artifactEffect(card, idx, me===G.player?"player":"ai");
+    pvpAct({t:"artifact", cardId:card.id, targetIdx:idx});
+    uiReset(); renderAll(); return;
   }
+  if(!side.field[idx]) return;
   ui.selField = idx; ui.selCard=null; ui.mode="idle";
   renderAll();
 }
-function onEnemySlotClick(idx){
-  if(G.active!=="player"||G.ended) return;
-  const t = G.ai.field[idx];
-  if(ui.mode==="attack"){
-    if(!t){ logMsg("目标为空。","s"); return; }
-    const s = G.player.field[ui.selField];
-    if(!s){ uiReset(); renderAll(); return; }
-    attackExec(G.player, s, G.ai, idx, effAtk(s));
-    uiReset(); renderAll(); return;
-  }
-  if(ui.mode==="skill"){
-    const s = G.player.field[ui.pending.caster];
-    if(!s){ uiReset(); renderAll(); return; }
-    if(!t){ logMsg("目标为空。","s"); return; }
-    skillEffect(G.player, s, idx);
-    uiReset(); renderAll(); return;
-  }
-  if(ui.mode==="artifact"){
-    if(!t){ logMsg("目标为空。","s"); return; }
-    const card = CARDS.find(c=>c.id===ui.pending.card);
-    G.player.mana-=card.cost; G.player.hand.splice(G.player.hand.indexOf(card.id),1);
-    artifactEffect(card, idx, "player"); uiReset(); renderAll(); return;
-  }
-}
+function onMySlotClick(idx){ onSlotClick(G.player, idx); }
+function onEnemySlotClick(idx){ onSlotClick(G.ai, idx); }
 function uiReset(){ ui.selCard=null; ui.selField=null; ui.mode="idle"; ui.pending={}; }
 
 /* ============ 调试面板 ============ */
@@ -1063,9 +1294,285 @@ function renderDebug(){
     `<b>验证统计：</b>破封 ${G.stats.breaks} 次（目标场均 2–3）｜ 克制攻击 ${G.stats.counterAttacks}/${G.stats.attacks} 次（${G.stats.attacks?Math.round(G.stats.counterAttacks/G.stats.attacks*100):0}%，目标 ≥40%）｜ 狂性 ${G.stats.raged} 次｜ 破势技 ${G.stats.skills} 次｜ 回合 ${G.turn}`;
 }
 
+/* ============ 在线对战（P2P WebRTC + 手动信令） ============ */
+let pc = null;
+function openMenu(){ document.getElementById("modeMenu").style.display="flex"; }
+function hideMenu(){ document.getElementById("modeMenu").style.display="none"; }
+function startPvp(role){
+  // 预创建对局骨架（数据在建立连接后才真正开局）
+  const sd = role==="p1" ? Math.floor(Math.random()*1e9) : 0;
+  G = {
+    turn: 1, active: "player", ended: false, winner: null,
+    mode: "pvp", role: role, seed: sd,
+    peer: null, waitingPeer: false,
+    player: null, ai: null,
+    stats: {breaks:0, counterAttacks:0, attacks:0, raged:0, sealed:0, skills:0, mulligan:0},
+    log: [], eventSeq: 0,
+  };
+  setupPeer();
+  const panel=document.getElementById("pvpPanel"); panel.style.display="block";
+  const step=document.getElementById("pvpStep");
+  document.getElementById("offerOut").style.display="none";
+  document.getElementById("offerIn").style.display="none";
+  document.getElementById("answerOut").style.display="none";
+  document.getElementById("answerIn").style.display="none";
+  const btns=document.getElementById("pvpBtns"); btns.innerHTML="";
+  if(role==="p1"){
+    step.innerHTML="<b>第 1 步：</b>点「复制连接码」发给朋友（微信/QQ 均可）。<br><b>第 2 步：</b>朋友把应答码发回后，粘贴到下方并点「建立连接」。";
+    document.getElementById("offerOut").style.display="block";
+    document.getElementById("answerIn").style.display="block";
+    const b1=document.createElement("button"); b1.className="btn small"; b1.textContent="复制连接码";
+    b1.onclick=()=>{ document.getElementById("offerOut").select(); document.execCommand("copy"); step.innerHTML="<b>已复制！</b>把连接码发给朋友，等朋友发回应答码后粘贴下方并点「建立连接」。"; };
+    const b2=document.createElement("button"); b2.className="btn small"; b2.textContent="建立连接";
+    b2.onclick=()=>{
+      try{
+        const a=JSON.parse(document.getElementById("answerIn").value);
+        pc.setRemoteDescription(a).then(()=>logMsg("信令交换完成，等待 P2P 握手…","g")).catch(e=>logMsg("应答码无效："+e.message,"e"));
+      }catch(e){ logMsg("应答码无效，请完整复制后粘贴。","e"); }
+    };
+    btns.appendChild(b1); btns.appendChild(b2);
+    pc.createOffer().then(o=>pc.setLocalDescription(o)).catch(e=>logMsg("创建连接失败："+e.message,"e"));
+  } else {
+    step.innerHTML="<b>粘贴发起方（1P）发来的连接码</b>，然后点「下一步」，再把生成的应答码发回给 1P。";
+    document.getElementById("offerIn").style.display="block";
+    document.getElementById("answerOut").style.display="block";
+    const b1=document.createElement("button"); b1.className="btn small"; b1.textContent="下一步";
+    b1.onclick=()=>{
+      try{
+        const o=JSON.parse(document.getElementById("offerIn").value);
+        pc.setRemoteDescription(o).then(()=>pc.createAnswer().then(a=>pc.setLocalDescription(a))).then(()=>{
+          step.innerHTML="<b>已生成应答码！</b>复制发回给发起方，等待对方连接后自动开局。";
+        }).catch(e=>logMsg("连接码无效："+e.message,"e"));
+      }catch(e){ logMsg("连接码无效，请完整复制后粘贴。","e"); }
+    };
+    const b2=document.createElement("button"); b2.className="btn small"; b2.textContent="复制应答码";
+    b2.onclick=()=>{ document.getElementById("answerOut").select(); document.execCommand("copy"); };
+    btns.appendChild(b1); btns.appendChild(b2);
+  }
+}
+function setupPeer(){
+  pc = new RTCPeerConnection({iceServers:[
+    {urls:["stun:stun.l.google.com:19302","stun:stun1.l.google.com:19302","stun:stun.qq.com:3478","stun:stun.miwifi.com:3478"]}
+  ]});
+  let dc = null;
+  // 仅发起方创建数据通道；应答方通过 ondatachannel 接收对方通道（避免双通道协商错乱）
+  if(G.role==="p1"){
+    dc = pc.createDataChannel("shp", {ordered:true});
+    dc.onopen = ()=>{ onP2POpen(dc); };
+    dc.onmessage = onPeerMsg;
+  }
+  pc.ondatachannel = (ev)=>{ dc=ev.channel; dc.onopen=()=>{ onP2POpen(dc); }; dc.onmessage=onPeerMsg; };
+  pc.onconnectionstatechange = ()=>{
+    if(pc.connectionState==="failed"||pc.connectionState==="disconnected"){ logMsg("P2P 连接已断开。","e"); G.peer=null; G.waitingPeer=false; }
+    else if(pc.connectionState==="connected"){ logMsg("P2P 通道已连通。","g"); }
+  };
+  pc.onicecandidate = (ev)=>{
+    if(pc.localDescription){
+      const s = JSON.stringify(pc.localDescription);
+      if(G && G.role==="p1"){ document.getElementById("offerOut").value=s; }
+      else if(G && G.role==="p2"){ document.getElementById("answerOut").value=s; }
+    }
+  };
+  // 兜底：4 秒后无论是否完成收集都写入当前信令（host 直连可用）
+  setTimeout(()=>{ if(pc && pc.localDescription){
+      const s = JSON.stringify(pc.localDescription);
+      if(G && G.role==="p1"){ document.getElementById("offerOut").value=s; }
+      else if(G && G.role==="p2"){ document.getElementById("answerOut").value=s; }
+  } }, 4000);
+}
+function onP2POpen(dc){
+  if(G.role==="p1"){
+    newGame("pvp","p1", G.seed);
+  }
+  G.peer = dc;
+  logMsg("P2P 连接已建立，正在开局…","g");
+  if(G.role==="p1"){
+    pvpSend({t:"init", seed:G.seed});
+  }
+}
+function onPeerMsg(ev){
+  let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
+  if(!m || !m.t) return;
+  if(m.t==="init" && G.role==="p2"){
+    newGame("pvp","p2", m.seed);
+    G.active = "ai"; // 1P 先手（本方视角为上方对象）
+    renderAll();
+    logMsg("连接成功，对局开始！1P 先手。","g");
+    return;
+  }
+  if(m.t==="act" && m.a && G.mode==="pvp" && G.player && G.ai){
+    executeAct(m.a);
+  }
+}
+function executeAct(a){
+  if(!G.player || !G.ai) return;
+  const me = localSide(a.role), opp = me===G.player?G.ai:G.player;
+  switch(a.t){
+    case "deploy": {
+      const card = CARDS.find(c=>c.id===a.cardId);
+      if(card && me.mana>=card.cost && !me.field[a.slotIdx]){ playCreature(me, card, a.slotIdx); }
+      break;
+    }
+    case "atk": {
+      const s = me.field[a.attIdx];
+      if(s && !s.attacked && !s.frozen && opp.field[a.defIdx]){ attackExec(me, s, opp, a.defIdx, effAtk(s, me)); }
+      break;
+    }
+    case "skill": {
+      const s = me.field[a.casterIdx];
+      if(s && s.broken && !s.skillUsed && me.poshi >= (s.skill? s.skill.cost : 0)){
+        skillEffect(me, s, a.targetIdx);
+      }
+      break;
+    }
+    case "artifact": {
+      const card = CARDS.find(c=>c.id===a.cardId);
+      if(card && me.mana>=card.cost && me.hand.indexOf(card.id)>=0){
+        me.mana-=card.cost; me.hand.splice(me.hand.indexOf(card.id),1);
+        artifactEffect(card, a.targetIdx, me===G.player?"player":"ai");
+      }
+      break;
+    }
+    case "brk": {
+      if(a.slotIdx!==undefined && me.field[a.slotIdx] && canBreak(me, a.slotIdx) && me.poshi>=breakCost(me.field[a.slotIdx].cost)){ doBreak(me, a.slotIdx); }
+      break;
+    }
+    case "hpReq": {
+      const attSide = localSide(a.role);
+      const att = attSide.field[a.attIdx];
+      if(att && !att.attacked && !att.frozen && fieldCreatures(attSide===G.player?G.ai:G.player).length>0){
+        ui.mode="defend"; ui.pending={hpReq:{attRole:a.role, attIdx:a.attIdx}};
+        renderAll();
+      }
+      break;
+    }
+    case "defendRes": {
+      const attSide = localSide(a.attRole || a.role);
+      resolveHpAttackBy(attSide, a.attIdx, a.blockerIdx);
+      if(attSide===mySide()){ G.waitingPeer=false; }
+      renderAll();
+      break;
+    }
+    case "hpDirect": {
+      const attSide = localSide(a.role);
+      resolveHpAttackBy(attSide, a.attIdx, null);
+      break;
+    }
+    case "endturn": {
+      const endName = a.role==="p1" ? "player" : "ai";
+      if(G.active !== endName) break;
+      const cur = G.active==="player"?G.player:G.ai;
+      settleEnd(cur);
+      if(G.ended) break;
+      G.active = cur===G.player?"ai":"player";
+      G.turn++;
+      if(G.turn > CFG.maxTurns){ finalByTurns(); break; }
+      startTurn(G.active==="player"?G.player:G.ai);
+      renderAll();
+      const nxt = G.active==="player"?G.player:G.ai;
+      logMsg(`—— 回合 ${G.turn}：${sideLabel(nxt)} 的回合 ——`,"s");
+      animTurn(`${sideLabel(nxt)} 回合 ${G.turn}`);
+      break;
+    }
+  }
+  renderAll();
+}
+
 /* ============ 启动 ============ */
-newGame();
+openMenu();
 syncCfgInputs();
+
+/* ============ ?pvpAuto 自动对局（本地验证用） ============ */
+(function(){
+  var qs = new URLSearchParams(location.search);
+  if(!qs.get("pvpAuto")) return;
+  var role = qs.get("role");
+  window.addEventListener("load", function(){
+    setTimeout(function(){
+      startPvp(role);
+      var iv = setInterval(function(){
+        if(role==="p1"){
+          var o = document.getElementById("offerOut").value;
+          if(o){ try{ localStorage.setItem("shp_offer", o); }catch(e){} clearInterval(iv); }
+        } else {
+          var o2 = localStorage.getItem("shp_offer");
+          if(o2){ document.getElementById("offerIn").value = o2;
+            var nb=[...document.querySelectorAll('#pvpBtns button')].find(function(b){return b.textContent.trim()==='下一步';});
+            if(nb) nb.click();
+            clearInterval(iv);
+          }
+        }
+      }, 300);
+      var iv2 = setInterval(function(){
+        if(role==="p1"){
+          var a = localStorage.getItem("shp_answer");
+          if(a){ document.getElementById("answerIn").value = a;
+            var cb=[...document.querySelectorAll('#pvpBtns button')].find(function(b){return b.textContent.trim()==='建立连接';});
+            if(cb) cb.click();
+            clearInterval(iv2);
+          }
+        } else {
+          var a2 = document.getElementById("answerOut").value;
+          if(a2){ try{ localStorage.setItem("shp_answer", a2); }catch(e){} clearInterval(iv2); }
+        }
+      }, 300);
+      // 开局后注入手牌 + 自动对局
+      var iv3 = setInterval(function(){
+        if(G && G.mode==="pvp" && G.player && G.peer && G.player.hand && G.role===role){
+          clearInterval(iv3);
+          var H=['F3','M2','W2','W6'];
+          G.player.hand = H.slice();
+          G.ai.hand = H.slice();
+          renderAll();
+          window.__autoLog = [];
+          window.__hist = [];
+          autoPlayPvp(role);
+        }
+      }, 400);
+    }, 600);
+  });
+  function autoPlayPvp(role){
+    var act = function(){
+      if(!G || G.ended){ reportAuto(); return; }
+      if(G.mode!=="pvp"){ reportAuto(); return; }
+      if(canActNow()){
+        var me = mySide();
+        var hi = me.hand.findIndex(function(id){ var c=CARDS.find(function(x){return x.id===id;}); return c && c.kind==="creature" && c.cost<=me.mana; });
+        if(hi>=0){ onHandClick(hi, true);
+          var db=[...document.querySelectorAll('#actionBar button')].find(function(b){return b.textContent.indexOf('部署到灵位')>=0;});
+          if(db) db.click();
+        }
+        setTimeout(function(){
+          var idx = me.field.findIndex(function(s){return s && !s.attacked;});
+          if(idx>=0){ onMySlotClick(idx);
+            var ab=[...document.querySelectorAll('#actionBar button')].find(function(b){return b.textContent.trim()==='攻击';});
+            if(ab){ ab.click();
+              var hb=[...document.querySelectorAll('#actionBar button')].find(function(b){return b.textContent.indexOf('攻击敌方本源')>=0;});
+              if(hb) hb.click();
+            }
+          }
+          setTimeout(function(){ if(canActNow()) endTurn();
+            var _op = me===G.player?G.ai:G.player;
+            window.__hist.push("t"+G.turn+"|a"+G.active+"|p1hp"+G.player.hp+"|p2hp"+G.ai.hp+"|myf"+JSON.stringify(me.field.map(function(x){return x?x.name:"-";}))+"|oppf"+JSON.stringify(_op.field.map(function(x){return x?x.name:"-";})));
+            setTimeout(act, 400); }, 400);
+        }, 350);
+      } else {
+        if(ui.mode==="defend"){
+          var di = mySide().field.findIndex(function(s){return s;});
+          if(di>=0) resolveDefend(di); else resolveDefend(null);
+        }
+        setTimeout(act, 450);
+      }
+    };
+    setTimeout(act, 700);
+  }
+  function reportAuto(){
+    var hist = (window.__hist||[]).join("\n");
+    var info = "AUTO|r="+(G.role||"?")+"|t="+(G.turn||0)+"|p1hp="+(G.player?G.player.hp:0)+"|p2hp="+(G.ai?G.ai.hp:0)+"|win="+(G.winner||"none")+"|end="+G.ended+"|p1f="+(G.player?(G.player.field.filter(Boolean).length):0)+"|p2f="+(G.ai?(G.ai.field.filter(Boolean).length):0)+"\n"+hist;
+    document.title = info.slice(0,400);
+    try{ localStorage.setItem("shp_res_"+role, info); }catch(e){}
+  }
+})();
 </script>
 </body>
 </html>
