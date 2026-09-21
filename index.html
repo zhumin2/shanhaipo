@@ -1056,27 +1056,30 @@ function renderHand(){
 }
 function renderMeters(){
   const set=(id,txt)=>document.getElementById(id).textContent=txt;
-  set("myHp",G.player.hp); set("aiHp",G.ai.hp); set("myMana",G.player.mana); set("aiMana",G.ai.mana);
-  set("myPoshi",G.player.poshi); set("aiPoshi",G.ai.poshi); set("myHand",G.player.hand.length); set("aiHand",G.ai.hand.length);
-  document.getElementById("myHpBar").style.width=(G.player.hp/CFG.hp*100)+"%";
-  document.getElementById("aiHpBar").style.width=(G.ai.hp/CFG.hp*100)+"%";
-  document.getElementById("myPoshiBar").style.width=(G.player.poshi/CFG.poshiCap*100)+"%";
-  document.getElementById("aiPoshiBar").style.width=(G.ai.poshi/CFG.poshiCap*100)+"%";
+  const me = mySide(), opp = oppSide();
+  set("myHp",me.hp); set("aiHp",opp.hp); set("myMana",me.mana); set("aiMana",opp.mana);
+  set("myPoshi",me.poshi); set("aiPoshi",opp.poshi); set("myHand",me.hand.length); set("aiHand",opp.hand.length);
+  document.getElementById("myHpBar").style.width=(me.hp/CFG.hp*100)+"%";
+  document.getElementById("aiHpBar").style.width=(opp.hp/CFG.hp*100)+"%";
+  document.getElementById("myPoshiBar").style.width=(me.poshi/CFG.poshiCap*100)+"%";
+  document.getElementById("aiPoshiBar").style.width=(opp.poshi/CFG.poshiCap*100)+"%";
   const tTag = document.getElementById("turnTag");
   if(G.mode==="ai"){ tTag.textContent = `回合 ${G.turn} · ${G.active==="player"?"你的回合":"敌方回合"}`; }
   else if(G.mode==="hotseat"){ tTag.textContent = `回合 ${G.turn} · ${G.active==="player"?"1P 回合":"2P 回合"}`; }
-  else { tTag.textContent = `回合 ${G.turn} · ${G.active==="player"?"你的回合":"对方回合"}`; }
+  else { tTag.textContent = `回合 ${G.turn} · ${canActNow()?"你的回合":"对方回合"}`; }
   const myZT=document.getElementById("myZoneTitle"), aiZT=document.getElementById("aiZoneTitle");
   if(G.mode==="hotseat"){ myZT.textContent="1P 战场（下方）"; aiZT.textContent="2P 战场（上方）"; }
   else if(G.mode==="pvp"){ myZT.textContent=G.role==="p1"?"1P 战场（你）":"2P 战场（你）"; aiZT.textContent=G.role==="p1"?"2P 战场（对方）":"1P 战场（对方）"; }
   else { myZT.textContent="你的战场"; aiZT.textContent="敌方（AI）"; }
-  document.getElementById("myDeckInfo").textContent = `· 牌库 ${G.player.deck.length}`;
-  document.getElementById("aiDeckInfo").textContent = `· 牌库 ${G.ai.deck.length}`;
+  document.getElementById("myDeckInfo").textContent = `· 牌库 ${me.deck.length}`;
+  document.getElementById("aiDeckInfo").textContent = `· 牌库 ${opp.deck.length}`;
 }
 function renderAll(){
+  if(G.mode==="pvp" && (!G.player || !G.ai)) return;
+  const me = mySide(), opp = oppSide();
   renderMeters();
-  renderField("myField", G.player, true);
-  renderField("aiField", G.ai, false);
+  renderField("myField", me, true);
+  renderField("aiField", opp, false);
   renderHand();
   renderActionBar();
   renderDebug();
