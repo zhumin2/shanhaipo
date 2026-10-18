@@ -1023,11 +1023,12 @@ function renderField(sideEl, side, isPlayer){
       const auraMod = isPlayer ? (auraXiong(side)?1:0) : (auraXiong(side)?1:0);
       const atkMod = auraMod + (s.skillBonus||0) + (s.turnAtkBuff||0);
       let flags = [];
-      if(s.sick) flags.push("待命");
+      if(s.sick) flags.push("无法行动");
       if(s.attacked) flags.push("已攻击");
       if(s.defended) flags.push("已行动");
       if(s.frozen) flags.push("冻结");
       if(s.tauntTurn) flags.push("守护");
+      if(!s.sick && !s.attacked && !s.defended && !s.frozen) flags.push("待命");
       slot.innerHTML = cardHtml(s, {atkMod}) + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
       slot.dataset.slotIdx = idx;
       slot.addEventListener("click", ()=> onSlotClick(side, idx));
