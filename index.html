@@ -522,7 +522,7 @@ function startTurn(side){
   if(auraXiang(side)){ side.hp = Math.min(CFG.hp, side.hp+1); logMsg(`${side===G.player?"你":"敌方"}祥瑞和鸣：本源 +1。`,"g"); }
   side.turnPlayed = [];
   side.turnAtkDown = 0;
-  fieldCreatures(side).forEach(s=>{ s.attacked=false; s.defended=false; s.frozen=false; s.skillBonus=0; s.turnAtkBuff=0; s.tauntTurn=false; });
+  fieldCreatures(side).forEach(s=>{ s.attacked=false; s.defended=false; s.frozen=false; s.skillBonus=0; s.turnAtkBuff=0; s.tauntTurn=false; s.sick=false; });
   // 神农鼎等进场效果在部署时处理；回合开始重置临时增益
 }
 function endTurn(){
@@ -666,7 +666,7 @@ function skillEffect(side, caster, targetInfo){
 /* ============ 出牌 ============ */
 function playCreature(side, card, slotIdx){
   const s = { id:card.id, name:card.name, cost:card.cost, atk:card.atk, hp:card.hp, element:card.element, aura:card.aura, kind:"creature",
-    effect:card.effect, skill:card.skill, broken:false, attacked:false, defended:false, frozen:false, skillUsed:false, skillBonus:0, turnAtkBuff:0, didDamageThisTurn:false };
+    effect:card.effect, skill:card.skill, broken:false, attacked:false, defended:false, frozen:false, skillUsed:false, skillBonus:0, turnAtkBuff:0, didDamageThisTurn:false, sick:true };
   side.field[slotIdx] = s;
   side.mana -= card.cost;
   const _hi = side.hand.indexOf(card.id);
@@ -751,7 +751,7 @@ function aiTurn(){
   // 4. 攻击（队列化：打本源时若玩家场上有神兽，暂停等玩家防御）
   aiAtkQueue = [];
   ai.field.forEach(s=>{
-    if(G.ended || !s || s.attacked || s.defended || s.frozen) return;
+    if(G.ended || !s || s.attacked || s.defended || s.frozen || s.sick) return;
     const atk = s.atk + (s.skillBonus||0) + (s.turnAtkBuff||0) + (auraXiong(G.ai)?1:0);
     if(atk<=0){ s.attacked=true; return; }
     aiAtkQueue.push({s, atk});
@@ -803,7 +803,7 @@ function aiResumeDefend(blockerIdx){
     attackHpExec(G.ai, it.s, it.atk);
   } else {
     const b = G.player.field[blockerIdx];
-    if(b && b.hp>0){ b.defended = true; logMsg(`${b.name} 挺身防御，代为承受攻击。`,"g"); }
+    if(b && b.hp>0 && !b.sick){ b.defended = true; logMsg(`${b.name} 挺身防御，代为承受攻击。`,"g"); }
     attackExec(G.ai, it.s, G.player, blockerIdx, it.atk);
   }
   aiAtkQueue.shift();
@@ -811,7 +811,7 @@ function aiResumeDefend(blockerIdx){
   aiProcessAttacks();
 }
 function aiPickBlocker(side, atk, attElement){
-  const cands = side.field.map((s,i)=>({s,i})).filter(x=>x.s && x.s.hp>0 && !x.s.attacked && !x.s.defended && !x.s.frozen);
+  const cands = side.field.map((s,i)=>({s,i})).filter(x=>x.s && x.s.hp>0 && !x.s.attacked && !x.s.defended && !x.s.frozen && !x.s.sick);
   if(!cands.length) return null;
   const dmg = (t)=>{ const m=getCounterMod(attElement, t.element); return Math.max(CFG.minDamage, atk+m); };
   cands.sort((a,b)=>{
@@ -829,7 +829,7 @@ function resolveHpAttackBy(attSide, attIdx, blockerIdx){
     attackHpExec(attSide, s, effAtk(s, attSide));
   } else {
     const b = opp.field[blockerIdx];
-    if(b && b.hp>0){ b.defended = true; logMsg(`${b.name} 挺身防御，代为承受攻击。`,"g"); }
+    if(b && b.hp>0 && !b.sick){ b.defended = true; logMsg(`${b.name} 挺身防御，代为承受攻击。`,"g"); }
     attackExec(attSide, s, opp, blockerIdx, effAtk(s, attSide));
   }
   uiReset(); renderAll();
@@ -1023,6 +1023,7 @@ function renderField(sideEl, side, isPlayer){
       const auraMod = isPlayer ? (auraXiong(side)?1:0) : (auraXiong(side)?1:0);
       const atkMod = auraMod + (s.skillBonus||0) + (s.turnAtkBuff||0);
       let flags = [];
+      if(s.sick) flags.push("待命");
       if(s.attacked) flags.push("已攻击");
       if(s.defended) flags.push("已行动");
       if(s.frozen) flags.push("冻结");
@@ -1098,7 +1099,7 @@ function renderActionBar(){
   bar.appendChild(endBtn);
 
   if(ui.mode==="defend"){
-    hint.textContent = `敌方（${sideLabel(opp)}）神兽来袭：点击己方未行动神兽挺身防御，或放弃防御`;
+    hint.textContent = `敌方（${sideLabel(opp)}）神兽来袭：点击己方可行动神兽挺身防御（本回合部署的无法行动），或放弃防御`;
     const give=document.createElement("button"); give.className="btn small alert"; give.textContent="放弃防御（本源承受）";
     give.onclick=()=>{ resolveDefend(null); };
     bar.appendChild(give);
@@ -1138,8 +1139,8 @@ function renderActionBar(){
     const s = me.field[ui.selField];
     hint.textContent = `${s.name}：选择操作`;
     const atkBtn=document.createElement("button"); atkBtn.className="btn"; atkBtn.textContent="攻击";
-    atkBtn.disabled = s.attacked||s.defended||s.frozen;
-    atkBtn.onclick=()=>{ if(!(s.attacked||s.defended||s.frozen)){ ui.mode="attack"; renderActionBar(); } };
+    atkBtn.disabled = s.attacked||s.defended||s.frozen||s.sick;
+    atkBtn.onclick=()=>{ if(!(s.attacked||s.defended||s.frozen||s.sick)){ ui.mode="attack"; renderActionBar(); } };
     bar.appendChild(atkBtn);
     if(canBreak(me, ui.selField)){
       const brBtn=document.createElement("button"); brBtn.className="btn"; brBtn.textContent=`破封（${breakCost(s.cost)}破势）`;
@@ -1219,6 +1220,7 @@ function onSlotClick(side, idx){
     if(!isMine) return;
     const blocker = side.field[idx];
     if(!blocker) return;
+    if(blocker.sick){ logMsg(`${blocker.name} 本回合刚部署，无法行动。`,"s"); renderAll(); return; }
     if(blocker.attacked || blocker.defended || blocker.frozen){ logMsg(`${blocker.name} 本回合已行动，无法防御。`,"s"); renderAll(); return; }
     resolveDefend(idx);
     return;
@@ -1421,7 +1423,7 @@ function executeAct(a){
     }
     case "atk": {
       const s = me.field[a.attIdx];
-      if(s && !s.attacked && !s.defended && !s.frozen && opp.field[a.defIdx]){ attackExec(me, s, opp, a.defIdx, effAtk(s, me)); }
+      if(s && !s.attacked && !s.defended && !s.frozen && !s.sick && opp.field[a.defIdx]){ attackExec(me, s, opp, a.defIdx, effAtk(s, me)); }
       break;
     }
     case "skill": {
@@ -1446,7 +1448,7 @@ function executeAct(a){
     case "hpReq": {
       const attSide = localSide(a.role);
       const att = attSide.field[a.attIdx];
-      if(att && !att.attacked && !att.frozen && fieldCreatures(attSide===G.player?G.ai:G.player).length>0){
+      if(att && !att.attacked && !att.frozen && !att.sick && fieldCreatures(attSide===G.player?G.ai:G.player).length>0){
         ui.mode="defend"; ui.pending={hpReq:{attRole:a.role, attIdx:a.attIdx}};
         renderAll();
       }
