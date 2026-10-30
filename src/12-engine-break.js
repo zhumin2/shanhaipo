@@ -12,9 +12,11 @@ function canBreak(side, slotIdx){
   return true;
 }
 function doBreak(side, slotIdx){
+  // 拒绝结构化（T1-A4）：非法破封拒绝且不扣破势（canBreak 已覆盖空位/神器/已破/镇封）
+  if(!canBreak(side, slotIdx)) return {ok:false, reason:"state"};
   const s = side.field[slotIdx];
   const cost = breakCost(s.cost);
-  if(side.poshi < cost){ EV({log:`破势不足（需 ${cost}）。`,k:"e"}); return; }
+  if(side.poshi < cost){ EV({log:`破势不足（需 ${cost}）。`,k:"e"}); return {ok:false, reason:"poshi"}; }
   side.poshi -= cost;
   s.broken = true;
   s.atk += CFG.breakAtk; s.hp += CFG.breakHp;
@@ -23,6 +25,7 @@ function doBreak(side, slotIdx){
   G.stats.breaks++;
   EV({log:`${s.name} 破封觉醒！${s.atk-CFG.breakAtk}/${s.hp-CFG.breakHp} → ${s.atk}/${s.hp}，获得破势技「${s.skill? s.skill.name:"—"}」。`,k:"p"});
   EV({anim:"break", side, idx:slotIdx});
+  return {ok:true};
 }
 function doSeal(side, slotIdx){
   const s = side.field[slotIdx];

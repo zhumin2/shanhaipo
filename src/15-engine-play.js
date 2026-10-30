@@ -1,5 +1,10 @@
 /* ============ 出牌 ============ */
 function playCreature(side, card, slotIdx){
+  // 拒绝结构化（T1-A4）：非法部署直接拒绝且不产生任何状态变更
+  if(!card || card.kind!=="creature") return {ok:false, reason:"notcreature"};
+  if(side.mana < card.cost) return {ok:false, reason:"mana"};
+  if(slotIdx===undefined || slotIdx<0 || slotIdx>2 || side.field[slotIdx]) return {ok:false, reason:"slot"};
+  if(side.hand.indexOf(card.id)<0) return {ok:false, reason:"hand"}; // 同时补上 TDD-10 的引擎级校验
   const s = { id:card.id, name:card.name, cost:card.cost, atk:card.atk, hp:card.hp, element:card.element, aura:card.aura, kind:"creature",
     effect:card.effect, skill:card.skill, broken:false, attacked:false, defended:false, frozen:false, skillUsed:false, skillBonus:0, turnAtkBuff:0, didDamageThisTurn:false, sick:true };
   side.field[slotIdx] = s;
@@ -36,5 +41,6 @@ function playCreature(side, card, slotIdx){
     }
   }
   EV({anim:"summon", side, idx:slotIdx});
+  return {ok:true};
 }
 

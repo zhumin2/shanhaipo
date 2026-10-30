@@ -586,9 +586,11 @@ function canBreak(side, slotIdx){
   return true;
 }
 function doBreak(side, slotIdx){
+  // 拒绝结构化（T1-A4）：非法破封拒绝且不扣破势（canBreak 已覆盖空位/神器/已破/镇封）
+  if(!canBreak(side, slotIdx)) return {ok:false, reason:"state"};
   const s = side.field[slotIdx];
   const cost = breakCost(s.cost);
-  if(side.poshi < cost){ EV({log:`破势不足（需 ${cost}）。`,k:"e"}); return; }
+  if(side.poshi < cost){ EV({log:`破势不足（需 ${cost}）。`,k:"e"}); return {ok:false, reason:"poshi"}; }
   side.poshi -= cost;
   s.broken = true;
   s.atk += CFG.breakAtk; s.hp += CFG.breakHp;
@@ -597,6 +599,7 @@ function doBreak(side, slotIdx){
   G.stats.breaks++;
   EV({log:`${s.name} 破封觉醒！${s.atk-CFG.breakAtk}/${s.hp-CFG.breakHp} → ${s.atk}/${s.hp}，获得破势技「${s.skill? s.skill.name:"—"}」。`,k:"p"});
   EV({anim:"break", side, idx:slotIdx});
+  return {ok:true};
 }
 function doSeal(side, slotIdx){
   const s = side.field[slotIdx];
@@ -622,34 +625,36 @@ function startTurn(side){
   // 神农鼎等进场效果在部署时处理；回合开始重置临时增益
 }
 function endTurn(){
-  if(G.ended || !canActNow()) return;
-  if(G.mode==="pvp" && G.waitingPeer){ logMsg("等待对方选择防御，暂不能结束回合。","s"); if(typeof __trace==="function"){__trace("endTurn-BLOCKED-wait");} return; }
+  // 拒绝结构化（T1-A4）：返回 {ok,reason}，供协议层与调用方判定
+  if(G.ended || !canActNow()) return {ok:false, reason:"turn"};
+  if(G.mode==="pvp" && G.waitingPeer){ logMsg("等待对方选择防御，暂不能结束回合。","s"); if(typeof __trace==="function"){__trace("endTurn-BLOCKED-wait");} return {ok:false, reason:"waiting"}; }
   if(G.mode==="pvp"){ if(typeof __trace==="function"){__trace("endTurn-local");} }
   if(G.mode==="pvp"){
     pvpAct({t:"endturn"});
   }
   if(G.mode==="ai"){
     settleEnd(G.player);
-    if(G.ended) return;
+    if(G.ended) return {ok:true};
     G.active = "ai"; // SHANHAIPO-006：turn=轮次，轮内换边不计数，回到 1P 时 +1（在 aiEndPhase）
     renderAll();
     logMsg(`—— 回合 ${G.turn}：敌方回合 ——`,"s");
     animTurn(`敌方回合 ${G.turn}`);
     setTimeout(aiTurn, 350);
-    return;
+    return {ok:true};
   }
   const cur = G.active==="player"?G.player:G.ai;
   settleEnd(cur);
-  if(G.ended) return;
+  if(G.ended) return {ok:true};
   G.active = cur===G.player?"ai":"player";
   if(G.active==="player"){ // 1P 新一轮开始
     G.turn++;
-    if(G.turn > CFG.maxTurns){ finalByTurns(); return; }
+    if(G.turn > CFG.maxTurns){ finalByTurns(); return {ok:true}; }
   }
   const nxt = G.active==="player"?G.player:G.ai;
   startTurn(nxt);
   renderAll();
   logMsg(`—— 回合 ${G.turn}：${sideLabel(nxt)} 的回合 ——`,"s"); animTurn(`${sideLabel(nxt)} 回合 ${G.turn}`);
+  return {ok:true};
 }
 function settleEnd(side){
   // 狂性反噬（SHANHAIPO-006 口径：本回合未攻击且未用破势技，被冻结豁免）
@@ -665,7 +670,7 @@ function settleEnd(side){
   checkEnd();
 }
 
-/* ============ 神器 / 破势技执行 ============ */
+/* ============ 神器 / 破势技执行（拒绝结构化 T1-A4：返回 {ok,reason}，非法输入零状态变更） ============ */
 function artifactEffect(card, targetInfo, casterSide){
   casterSide = casterSide || "player";
   const caster = casterSide==="player" ? G.player : G.ai;
@@ -674,7 +679,7 @@ function artifactEffect(card, targetInfo, casterSide){
   if(fx.type==="damage"){
     if(fx.target==="enemyCreature"){
       const t = opp.field[targetInfo];
-      if(!t){ EV({log:"目标不存在。",k:"e"}); return; }
+      if(!t){ EV({log:"目标不存在。",k:"e"}); return {ok:false, reason:"target"}; }
       dealDamage(caster, {name:card.name, element:card.element, side:casterSide, broken:false, skillBonus:0}, opp, targetInfo, fx.value, true);
     }
   } else if(fx.type==="damageHp"){
@@ -685,27 +690,32 @@ function artifactEffect(card, targetInfo, casterSide){
     damageHpRaw(opp, d, card.name);
   } else if(fx.type==="heal"){
     const t = caster.field[targetInfo];
-    if(!t){ EV({log:"目标不存在。",k:"e"}); return; }
+    if(!t){ EV({log:"目标不存在。",k:"e"}); return {ok:false, reason:"target"}; }
     t.hp += fx.value; EV({log:`${card.name} 使 ${t.name} 恢复 ${fx.value} 点生命。`,k:"g"});
   } else if(fx.type==="buffHp"){
     const t = caster.field[targetInfo];
-    if(!t){ EV({log:"目标不存在。",k:"e"}); return; }
+    if(!t){ EV({log:"目标不存在。",k:"e"}); return {ok:false, reason:"target"}; }
     t.hp += fx.value; EV({log:`${card.name} 使 ${t.name} 生命 +${fx.value}。`,k:"g"});
   } else if(fx.type==="seal"){
     const t = opp.field[targetInfo];
-    if(!t){ EV({log:"目标不存在。",k:"e"}); return; }
-    if(!t.broken){ EV({log:`${card.name}：${t.name} 并非破封态，镇封无效。`,k:"s"}); return; }
+    if(!t){ EV({log:"目标不存在。",k:"e"}); return {ok:false, reason:"target"}; }
+    if(!t.broken){ EV({log:`${card.name}：${t.name} 并非破封态，镇封无效。`,k:"s"}); return {ok:false, reason:"state"}; }
     doSeal(opp, targetInfo);
   }
+  return {ok:true};
 }
+const SKILL_NEED_TARGET = ["damage","freeze","enemyAtkDown","destroyLe3"];
 function skillEffect(side, caster, targetInfo){
-  const sk = caster.skill;
-  if(!sk){ return; }
-  if(side.poshi < sk.cost){ EV({log:"破势不足。",k:"e"}); return; }
+  const sk = caster && caster.skill;
+  if(!sk){ return {ok:false, reason:"noskill"}; }
+  if(!caster.broken){ return {ok:false, reason:"state"}; }              // 未破封无破势技
+  if(caster.skillUsed){ return {ok:false, reason:"used"}; }             // 本回合已用（原先会重复扣破势）
+  if(side.poshi < sk.cost){ EV({log:"破势不足。",k:"e"}); return {ok:false, reason:"poshi"}; }
+  const opp = side===G.player ? G.ai : G.player;
+  if(SKILL_NEED_TARGET.indexOf(sk.type)>=0 && !opp.field[targetInfo]){ return {ok:false, reason:"target"}; } // 扣费前校验（原先白扣破势）
   side.poshi -= sk.cost;
   caster.skillUsed = true;
   G.stats.skills++;
-  const opp = side===G.player ? G.ai : G.player;
   switch(sk.type){
     case "allEnemy": {
       fieldCreatures(opp).forEach(t=>{
@@ -716,7 +726,7 @@ function skillEffect(side, caster, targetInfo){
     }
     case "enemyAtkDown": {
       const t = opp.field[targetInfo];
-      if(!t){ return; }
+      if(!t){ return {ok:false, reason:"target"}; }
       t.turnAtkBuff = (t.turnAtkBuff||0) - sk.value;
       t.frozen = true; // 原型：攻击下降以"本回合无法攻击"简化实现冻结类
       EV({log:`${caster.name} 的「${sk.name}」：${t.name} 本回合攻击 −${sk.value}。`,k:"e"});
@@ -737,30 +747,36 @@ function skillEffect(side, caster, targetInfo){
     case "damageHp": { damageHpRaw(opp, sk.value, caster.name+"·"+sk.name); break; }
     case "damage": {
       const t = opp.field[targetInfo];
-      if(!t){ return; }
+      if(!t){ return {ok:false, reason:"target"}; }
       dealDamage(side, {name:caster.name, element:caster.element, side:side===G.player?"player":"ai", broken:true, skillBonus:0}, opp, targetInfo, sk.value, true);
       break;
     }
     case "freeze": {
       const t = opp.field[targetInfo];
-      if(!t){ return; }
+      if(!t){ return {ok:false, reason:"target"}; }
       t.frozen = true;
       EV({log:`${caster.name} 的「${sk.name}」：${t.name} 本回合无法攻击。`,k:"e"});
       break;
     }
     case "destroyLe3": {
       const t = opp.field[targetInfo];
-      if(!t){ return; }
+      if(!t){ return {ok:false, reason:"target"}; }
       if(t.hp<=3){ killCreature(opp, targetInfo); EV({log:`${caster.name} 的「${sk.name}」吞噬了 ${t.name}。`,k:"e"}); }
       else { EV({log:`${t.name} 生命 ${t.hp} > 3，吞噬失败。`,k:"s"}); }
       break;
     }
   }
   EV({anim:"skill", side, idx:side.field.indexOf(caster)});
+  return {ok:true};
 }
 
 /* ============ 出牌 ============ */
 function playCreature(side, card, slotIdx){
+  // 拒绝结构化（T1-A4）：非法部署直接拒绝且不产生任何状态变更
+  if(!card || card.kind!=="creature") return {ok:false, reason:"notcreature"};
+  if(side.mana < card.cost) return {ok:false, reason:"mana"};
+  if(slotIdx===undefined || slotIdx<0 || slotIdx>2 || side.field[slotIdx]) return {ok:false, reason:"slot"};
+  if(side.hand.indexOf(card.id)<0) return {ok:false, reason:"hand"}; // 同时补上 TDD-10 的引擎级校验
   const s = { id:card.id, name:card.name, cost:card.cost, atk:card.atk, hp:card.hp, element:card.element, aura:card.aura, kind:"creature",
     effect:card.effect, skill:card.skill, broken:false, attacked:false, defended:false, frozen:false, skillUsed:false, skillBonus:0, turnAtkBuff:0, didDamageThisTurn:false, sick:true };
   side.field[slotIdx] = s;
@@ -797,6 +813,7 @@ function playCreature(side, card, slotIdx){
     }
   }
   EV({anim:"summon", side, idx:slotIdx});
+  return {ok:true};
 }
 
 /* ============ 事件流（T1-A2）：引擎产出结构化事件，表现层统一消费 ============
@@ -944,7 +961,7 @@ function aiPickBlocker(side, atk, attElement){
 }
 function resolveHpAttackBy(attSide, attIdx, blockerIdx){
   const s = attSide.field[attIdx];
-  if(!s){ uiReset(); renderAll(); return; }
+  if(!s){ uiReset(); renderAll(); return {ok:false, reason:"state"}; }
   const opp = attSide===G.player?G.ai:G.player;
   if(blockerIdx===null || blockerIdx===undefined){
     attackHpExec(attSide, s, effAtk(s, attSide));
@@ -954,6 +971,7 @@ function resolveHpAttackBy(attSide, attIdx, blockerIdx){
     attackExec(attSide, s, opp, blockerIdx, effAtk(s, attSide));
   }
   uiReset(); renderAll();
+  return {ok:true};
 }
 function resolveDefend(blockerIdx){
   if(ui.pending.hpReq){
@@ -993,16 +1011,21 @@ function aiEndPhase(){
   animTurn(`你的回合 ${G.turn}`);
 }
 function attackExec(attSide, s, defSide, idx, atk){
+  // 拒绝结构化（T1-A4）：目标非法拒绝且不消耗行动
+  if(!s || !defSide || !defSide.field[idx]) return {ok:false, reason:"target"};
   s.attacked = true;
   s.didDamageThisTurn = true;
   EV({anim:"lunge", side:attSide, idx:attSide.field.indexOf(s)});
   dealDamage(attSide, {name:s.name, element:s.element, side:attSide===G.player?"player":"ai", broken:s.broken, skillBonus:s.skillBonus||0}, defSide, idx, atk, false);
+  return {ok:true};
 }
 function attackHpExec(attSide, s, atk){
+  if(!s) return {ok:false, reason:"state"};
   s.attacked = true;
   s.didDamageThisTurn = true;
   EV({anim:"lunge", side:attSide, idx:attSide.field.indexOf(s)});
   damageHpRaw(attSide===G.player?G.ai:G.player, atk, s.name);
+  return {ok:true};
 }
 
 /* ============ 胜负 ============ */

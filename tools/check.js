@@ -27,7 +27,7 @@ let failed = false;
 const fail = msg => { failed = true; console.error("  ✗ " + msg); };
 const ok = msg => console.log("  ✓ " + msg);
 
-console.log(`[1/4] node --check（${files.length} 个模块拼接）`);
+console.log(`[1/5] node --check（${files.length} 个模块拼接）`);
 try {
   const tmp = path.join(os.tmpdir(), `shp_check_${process.pid}.js`);
   fs.writeFileSync(tmp, all);
@@ -38,7 +38,7 @@ try {
   fail("语法错误:\n" + (e.stderr || e.message));
 }
 
-console.log("[2/4] Math.random 对局路径审计");
+console.log("[2/5] Math.random 对局路径审计");
 const violations = [];
 for (const p of parts) {
   p.code.split("\n").forEach((ln, i) => {
@@ -48,7 +48,7 @@ for (const p of parts) {
 if (violations.length) fail("种子生成之外出现 Math.random: " + violations.join(", "));
 else ok("对局内随机全部走 mulberry32（白名单外无 Math.random）");
 
-console.log("[3/4] 顶层函数重名检测");
+console.log("[3/5] 顶层函数重名检测");
 const seen = new Map();
 const dups = [];
 for (const p of parts) {
@@ -60,12 +60,20 @@ for (const p of parts) {
 if (dups.length) fail("重名函数: " + dups.join("; "));
 else ok(`${seen.size} 个顶层函数无重名`);
 
-console.log("[4/4] 产物一致性（index.html 是否为最新构建）");
+console.log("[4/5] 产物一致性（index.html 是否为最新构建）");
 try {
   cp.execSync(`node "${path.join(__dirname, "build.js")}" --check`, { stdio: "pipe", cwd: ROOT });
   ok("index.html 与 src+template 字节一致");
 } catch (e) {
   fail("index.html 过期或被手工改动，请运行 node tools/build.js");
+}
+
+console.log("[5/5] headless 确定性回归（sim 500 局双跑对拍）");
+try {
+  const simOut = cp.execSync(`node "${path.join(__dirname, "sim.js")}" 500`, { stdio: "pipe", cwd: ROOT, encoding: "utf8" });
+  ok(simOut.trim().split("\n")[0].replace("sim: ", ""));
+} catch (e) {
+  fail("确定性回归失败（同种子双跑出现分歧或未终局）: " + (e.stdout ? e.stdout.split("\n").slice(0, 3).join(" / ") : e.message));
 }
 
 if (failed) { console.error("check FAIL"); process.exit(1); }

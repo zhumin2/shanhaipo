@@ -117,7 +117,7 @@ function aiPickBlocker(side, atk, attElement){
 }
 function resolveHpAttackBy(attSide, attIdx, blockerIdx){
   const s = attSide.field[attIdx];
-  if(!s){ uiReset(); renderAll(); return; }
+  if(!s){ uiReset(); renderAll(); return {ok:false, reason:"state"}; }
   const opp = attSide===G.player?G.ai:G.player;
   if(blockerIdx===null || blockerIdx===undefined){
     attackHpExec(attSide, s, effAtk(s, attSide));
@@ -127,6 +127,7 @@ function resolveHpAttackBy(attSide, attIdx, blockerIdx){
     attackExec(attSide, s, opp, blockerIdx, effAtk(s, attSide));
   }
   uiReset(); renderAll();
+  return {ok:true};
 }
 function resolveDefend(blockerIdx){
   if(ui.pending.hpReq){
@@ -166,15 +167,20 @@ function aiEndPhase(){
   animTurn(`你的回合 ${G.turn}`);
 }
 function attackExec(attSide, s, defSide, idx, atk){
+  // 拒绝结构化（T1-A4）：目标非法拒绝且不消耗行动
+  if(!s || !defSide || !defSide.field[idx]) return {ok:false, reason:"target"};
   s.attacked = true;
   s.didDamageThisTurn = true;
   EV({anim:"lunge", side:attSide, idx:attSide.field.indexOf(s)});
   dealDamage(attSide, {name:s.name, element:s.element, side:attSide===G.player?"player":"ai", broken:s.broken, skillBonus:s.skillBonus||0}, defSide, idx, atk, false);
+  return {ok:true};
 }
 function attackHpExec(attSide, s, atk){
+  if(!s) return {ok:false, reason:"state"};
   s.attacked = true;
   s.didDamageThisTurn = true;
   EV({anim:"lunge", side:attSide, idx:attSide.field.indexOf(s)});
   damageHpRaw(attSide===G.player?G.ai:G.player, atk, s.name);
+  return {ok:true};
 }
 
