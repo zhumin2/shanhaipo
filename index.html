@@ -145,6 +145,10 @@
   .modebox .btn{display:block; width:100%; margin:8px 0; font-size:15px;}
   .modebox hr{border:none; border-top:1px solid var(--line); margin:12px 0;}
   .modebox textarea{width:100%; height:60px; font-size:10px; font-family:Consolas,monospace; margin:5px 0; resize:vertical; border:1px solid var(--line); border-radius:6px; padding:4px;}
+
+  /* ===== 用户档案面板（本地用户系统） ===== */
+  .ubox{background:var(--card); border-radius:16px; padding:22px 28px; text-align:center; max-width:520px; width:92%; max-height:88vh; overflow-y:auto;}
+  .ubox h2{font-size:20px; margin-bottom:12px; letter-spacing:4px; color:#3D2F5C;}
 </style>
 </head>
 <body>
@@ -152,7 +156,7 @@
 
 <header>
   <h1>山海破</h1>
-  <div class="sub">可玩原型 · 规则集 SHANHAIPO-003 · v1.2（打AI / 同屏双人 / 在线对战）</div>
+  <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v1.6（打AI / 同屏双人 / 在线对战 · 本地档案）</div>
 </header>
 
 <div class="topbar">
@@ -160,6 +164,7 @@
   <div>
     <button class="btn small" onclick="openMenu()">模式</button>
     <button class="btn small" onclick="toggleHelp()">操作说明</button>
+    <button class="btn small" onclick="openUserPanel()">档案</button>
     <button class="btn small" onclick="toggleDebug()">调试面板</button>
     <button class="btn small alert" onclick="restartGame()">重新开局</button>
   </div>
@@ -172,11 +177,12 @@
   <summary>操作说明（一屏速览）</summary>
   ① 点击<b>手牌</b>选中（费用不足变灰）；点「部署」放到我方灵位，点「使用」对目标施放神器。<br>
   ② 点击<b>我方灵位神兽</b>选中，操作栏出现：<b>攻击</b>（再点敌方目标）· <b>破封</b>（消耗破势翻面，+2/+2 与破势技）· <b>破势技</b>（消耗破势发动）。<br>
-  ③ <b>狂性</b>：破封神兽本回合未造成伤害，回合结束你的本源 −1。<b>镇封</b>：对方破封随从被神器/效果翻回封印态后，本局不可再破封。<br>
+  ③ <b>狂性</b>：破封神兽本回合未攻击且未用破势技（被冻结豁免），回合结束你的本源 −1。<b>镇封</b>：对方破封随从被神器/效果翻回封印态后，本局不可再破封。<br>
   ④ <b>五行</b>：金克木克土克水克火克金，克制 +1、被克 −1（最低 1）。<b>破势</b>：每造成 3 点伤害 +1（上限 10）。<br>
   ⑤ 祥瑞羁绊（场上祥瑞≥2）：回合开始本源+1；凶煞羁绊（场上凶煞≥2）：我方神兽攻击+1。<br>
   ⑥ 击破对方 30 点本源获胜；30 回合未分胜负按本源判定。<br>
-  ⑦ 防御：神兽攻击对方本源时，被攻击方场上有存活神兽可点其挺身防御（代为承受伤害，五行克制照常结算）；也可放弃防御。<br>  ⑧ 模式：顶部「模式」按钮切换 —— 打AI / 同屏双人（1P下方 2P上方 轮流操作）/ 在线对战（连接码 P2P 直连）。
+  ⑦ 防御：神兽攻击对方本源时，被攻击方场上有存活神兽可点其挺身防御（代为承受伤害，五行克制照常结算）；也可放弃防御。<br>  ⑧ 模式：顶部「模式」按钮切换 —— 打AI / 同屏双人（1P下方 2P上方 轮流操作）/ 在线对战（连接码 P2P 直连）。<br>
+  ⑨ 档案：顶部「档案」查看昵称与战绩（自动记录每局结果，仅存本设备浏览器，可随时重置）。
 </details>
 
 <!-- 敌方 -->
@@ -260,6 +266,10 @@
   </div>
 </div>
 
+<div class="modemenu" id="userPanel" style="display:none;">
+  <div class="ubox" id="userBox"></div>
+</div>
+
 <div class="endbanner" id="endBanner" style="display:none;">
   <div class="endbox">
     <h2 id="endTitle">胜</h2>
@@ -277,7 +287,7 @@ let RNG = Math.random;
 function seedRNG(seed){ RNG = mulberry32(seed); }
 /* ============ 规则集配置（与 design-contract.json 一致） ============ */
 const DEFAULT_CFG = {
-  ruleset_id: "SHANHAIPO-003",
+  ruleset_id: "SHANHAIPO-006",
   hp: 30, manaCap: 10, handCap: 10,
   poshiCap: 10, poshiPer: 3,
   breakLow: 3, breakMid: 5, breakHigh: 7,   // 按费用 1-2 / 3-4 / 5+
@@ -290,7 +300,7 @@ const ELEMENTS = ["金","木","水","火","土"];
 const COUNTER = {"金":"木","木":"土","土":"水","水":"火","火":"金"};
 const ECOLOR = {"金":"var(--e-jin)","木":"var(--e-mu)","水":"var(--e-shui)","火":"var(--e-huo)","土":"var(--e-tu)"};
 
-/* ============ 卡牌数据（P0 子集 25 张 = 24 张正式卡 + 1 张镇封验证神器「番天印」，原型简化标注） ============ */
+/* ============ 卡牌数据（P0 全集 21 张 = 16 神兽 + 5 神器，与产品设计文档 §6.2 全卡表一致） ============ */
 function C(id,name,cost,atk,hp,element,aura,effect,skill,source){
   return {id,name,cost,atk,hp,element,aura,effect,skill,source, kind: atk>0?"creature":"artifact"};
 }
@@ -323,6 +333,86 @@ const CARDS = [
   C("E4","开明兽",4,4,5,"土","祥",null,{name:"九门",cost:3,type:"draw",value:1,desc:"抽 1 张牌"}, "《海内西经》"),
 ];
 
+/* ============ 用户系统（本地档案 · L0.5） ============
+ * schema 与《山海破-页游完整技术设计》§6.1/§11.4 前向兼容：T1 接服务端时 guestToken 平移为账号。
+ * 注意：本模块的 Math.random 仅用于昵称/令牌生成（非对局随机，不触碰种子化 RNG，见 tools/check.js 白名单）。 */
+const USER_KEYS = { profile:"shp.profile", records:"shp.records" };
+const UserSys = {
+  v: 1, ringCap: 200,
+  profile: null,          // { v, guestToken, nickname, createdAt, updatedAt }
+  records: null,          // { v, list:[{ts,mode,result,winner,turns,seed,opp,hp[2],stats}] }
+  oppName: null,          // PvP 对手昵称（init.name / hello 消息交换所得）
+  init(){
+    try { this.profile = JSON.parse(localStorage.getItem(USER_KEYS.profile) || "null"); } catch(e){ this.profile = null; }
+    try { this.records = JSON.parse(localStorage.getItem(USER_KEYS.records) || "null"); } catch(e){ this.records = null; }
+    let created = false;
+    if(!this.profile || this.profile.v !== this.v){
+      this.profile = { v: this.v, guestToken: this.newToken(), nickname: this.genNickname(), createdAt: Date.now(), updatedAt: Date.now() };
+      created = true;
+    }
+    if(!this.records || this.records.v !== this.v){ this.records = { v: this.v, list: [] }; }
+    if(created){ this.save(); }
+    return this.profile;
+  },
+  save(){
+    try {
+      localStorage.setItem(USER_KEYS.profile, JSON.stringify(this.profile));
+      localStorage.setItem(USER_KEYS.records, JSON.stringify(this.records));
+    } catch(e){}
+  },
+  newToken(){ return "g-" + Date.now().toString(36) + "-" + Math.floor(Math.random()*1e9).toString(36); },
+  genNickname(){
+    const a = ["青云","玄水","赤炎","苍山","幽谷","流云","丹穴","灵墟"];
+    const b = ["白泽","应龙","夫诸","乘黄","毕方","九尾","獬豸","精卫","狰","刑天"];
+    return a[Math.floor(Math.random()*a.length)] + b[Math.floor(Math.random()*b.length)];
+  },
+  setNickname(n){
+    n = String(n||"").trim().slice(0,12);
+    if(!n || n === this.profile.nickname) return false;
+    this.profile.nickname = n;
+    this.profile.updatedAt = Date.now();
+    this.save();
+    return true;
+  },
+  // 终局记录（showEnd 调用）：result 仅为 ai/pvp 视角（win/lose/draw）；热座存 winner 座位
+  recordGame(game){
+    if(!game || !game.ended) return null;
+    const Gm = game;
+    const my = (Gm.mode === "pvp") ? (Gm.role === "p1" ? "player" : "ai") : "player";
+    let result = null;
+    if(Gm.mode === "ai" || Gm.mode === "pvp"){
+      result = Gm.winner === "draw" ? "draw" : (Gm.winner === my ? "win" : "lose");
+    }
+    const winner = Gm.winner === "draw" ? "平局" : (Gm.winner === "player" ? "1P" : "2P");
+    const rec = {
+      ts: Date.now(), mode: Gm.mode, result, winner, turns: Gm.turn, seed: Gm.seed,
+      opp: (Gm.mode === "pvp" && this.oppName) ? this.oppName : null,
+      hp: [Gm.player ? Gm.player.hp : 0, Gm.ai ? Gm.ai.hp : 0],
+      stats: Gm.stats ? Object.assign({}, Gm.stats) : {},
+    };
+    this.records.list.push(rec);
+    if(this.records.list.length > this.ringCap){ this.records.list.splice(0, this.records.list.length - this.ringCap); }
+    this.save();
+    return rec;
+  },
+  summary(){
+    const s = { ai:{w:0,l:0,d:0}, pvp:{w:0,l:0,d:0}, hotseat:0, total:0, turns:0 };
+    this.records.list.forEach(r=>{
+      s.total++; s.turns += r.turns||0;
+      if(r.mode === "ai" || r.mode === "pvp"){
+        const m = s[r.mode];
+        if(r.result === "win") m.w++; else if(r.result === "lose") m.l++; else m.d++;
+      } else if(r.mode === "hotseat"){ s.hotseat++; }
+    });
+    return s;
+  },
+  reset(){
+    try { localStorage.removeItem(USER_KEYS.profile); localStorage.removeItem(USER_KEYS.records); } catch(e){}
+    this.profile = null; this.records = null;
+    this.init();
+  },
+};
+
 /* ============ 游戏状态 ============ */
 let G = null;
 let ui = { selCard:null, selField:null, mode:"idle", pending:{type:null, card:null, caster:null} };
@@ -349,8 +439,10 @@ function newGame(mode, role, seed){
     stats: {breaks:0, counterAttacks:0, attacks:0, raged:0, sealed:0, skills:0, mulligan:0},
     log: [], eventSeq: 0,
   };
+  EVQ = []; // 事件队列随对局重置（T1-A2）
   for(let i=0;i<3;i++){ G.player.hand.push(G.player.deck.pop()); }
   for(let i=0;i<3;i++){ G.ai.hand.push(G.ai.deck.pop()); }
+  if(typeof UserSys!=="undefined"){ UserSys.oppName = null; } // PvP 对手昵称随对局重置（hello/init.name 重新交换）
   hideMenu(); hideEnd();
   renderAll();
   if(G.mode==="ai"){ logMsg("对局开始：你的回合（先手）。点击手牌部署神兽。","s"); }
@@ -388,13 +480,13 @@ function localSide(role){
 function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(RNG()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
 function draw(side,n){
   for(let i=0;i<n;i++){
-    if(side.deck.length===0){ damageHpRaw(side,1,"疲乏"); logMsg("牌库已空，抽牌受到 1 点疲乏伤害。","e"); continue; }
+    if(side.deck.length===0){ damageHpRaw(side,1,"疲乏"); EV({log:"牌库已空，抽牌受到 1 点疲乏伤害。",k:"e"}); continue; }
     side.hand.push(side.deck.pop());
   }
   if(side.hand.length>CFG.handCap){
-    // 手牌超上限由玩家弃置（AI 自动弃最贵）
+    // 手牌超上限自动弃置最低费（原型简化，玩家与 AI 口径一致）
     while(side.hand.length>CFG.handCap){
-      if(side===G.player){ side.hand.sort((a,b)=>CARDS.find(x=>x.id===a).cost-CARDS.find(x=>x.id===b).cost); side.hand.shift(); logMsg("手牌超过上限，自动弃置 1 张（原型简化）。","s"); }
+      if(side===G.player){ side.hand.sort((a,b)=>CARDS.find(x=>x.id===a).cost-CARDS.find(x=>x.id===b).cost); side.hand.shift(); EV({log:"手牌超过上限，自动弃置 1 张（原型简化）。",k:"s"}); }
       else { side.hand.sort((a,b)=>CARDS.find(x=>x.id===a).cost-CARDS.find(x=>x.id===b).cost); side.hand.shift(); }
     }
   }
@@ -425,13 +517,13 @@ function dealDamage(attackerSide, attacker, defSide, defSlotIdx, base, isSkill){
     const mod = getCounterMod(attacker.element, def.element);
     dmg = Math.max(CFG.minDamage, base + mod);
     G.stats.attacks++;
-    if(mod>0){ G.stats.counterAttacks++; logMsg(`五行克制：${attacker.name}（${attacker.element}）克制 ${def.name}（${def.element}），伤害 +1。`,"g"); }
-    if(mod<0){ logMsg(`五行被克：${attacker.name}（${attacker.element}）被 ${def.name}（${def.element}）克制，伤害 −1。`,"e"); }
+    if(mod>0){ G.stats.counterAttacks++; EV({log:`五行克制：${attacker.name}（${attacker.element}）克制 ${def.name}（${def.element}），伤害 +1。`,k:"g"}); }
+    if(mod<0){ EV({log:`五行被克：${attacker.name}（${attacker.element}）被 ${def.name}（${def.element}）克制，伤害 −1。`,k:"e"}); }
   }
   if(def){
     def.hp -= dmg;
-    animHit(sideFieldEl(defSide), defSlotIdx, dmg, dmg>base?"#C9A227":(dmg<base?"#8B5C3E":"#C0392B"));
-    logMsg(`${attacker?attacker.name:"效果"} 对 ${def.name} 造成 ${dmg} 点伤害${mod2str(attacker,def)}。`,"n");
+    EV({anim:"hit", side:defSide, idx:defSlotIdx, n:dmg, c:dmg>base?"#C9A227":(dmg<base?"#8B5C3E":"#C0392B")});
+    EV({log:`${attacker?attacker.name:"效果"} 对 ${def.name} 造成 ${dmg} 点伤害${mod2str(attacker,def)}。`});
     // 破势：按伤害事件 floor(X/3)
     if(attacker && attacker.side==="player"){ gainPoshi(G.player, dmg, attacker); }
     if(attacker && attacker.side==="ai"){ gainPoshi(G.ai, dmg, attacker); }
@@ -452,16 +544,21 @@ function gainPoshi(side, dmg, attacker){
   if(gain>0){
     const before = side.poshi;
     side.poshi = Math.min(CFG.poshiCap, side.poshi + gain);
-    logMsg(`${side===G.player?"你":"敌方"}获得 ${side.poshi-before} 点破势（本次伤害 ${dmg}）。`,"p");
+    EV({log:`${side===G.player?"你":"敌方"}获得 ${side.poshi-before} 点破势（本次伤害 ${dmg}）。`,k:"p"});
   }
 }
 function damageHpRaw(side, dmg, src){
   if(!side) return;
-  let d = dmg;
-  if(side.field.some(s=>s&&s.effect&&s.effect.fx==="hpReduce")){ d = Math.max(0, d-1); logMsg(`${src}：玄武减伤生效，本源实际 −${d}。`,"s"); }
+  let d = Math.max(0, dmg); // 攻被减益至 ≤0 时不得为负（负伤害=回血，见技术设计文档 TDD-03）
+  if(side.field.some(s=>s&&s.effect&&s.effect.fx==="hpReduce")){ d = Math.max(0, d-1); EV({log:`${src}：玄武减伤生效，本源实际 −${d}。`,k:"s"}); }
+  if(side.immune && d >= side.hp){ // 刑天亡语「断首犹战」：下一次致命伤害被抵消（SHANHAIPO-006 / TDD-16）
+    side.immune = false;
+    EV({log:`${src} 的致命伤害被「断首犹战」抵消！`,k:"g"});
+    return;
+  }
   side.hp = Math.max(0, side.hp - d);
-  animHp(side, d);
-  logMsg(`${src} 使${side===G.player?"你的":"敌方"}本源 −${d}。`,"e");
+  EV({anim:"hp", side, n:d});
+  EV({log:`${src} 使${side===G.player?"你的":"敌方"}本源 −${d}。`,k:"e"});
   checkEnd();
 }
 function killCreature(sideObj, idx){
@@ -469,10 +566,10 @@ function killCreature(sideObj, idx){
   if(!s) return;
   sideObj.field[idx] = null;
   sideObj.grave.push(s.id);
-  logMsg(`${s.name} 阵亡。`,"e");
-  if(s.effect && s.effect.fx==="reshuffle"){ sideObj.deck.unshift(s.id); shuffle(sideObj.deck); logMsg(`${s.name}（精卫）衔石填海，洗回牌库。`,"g"); }
+  EV({log:`${s.name} 阵亡。`,k:"e"});
+  if(s.effect && s.effect.fx==="reshuffle"){ sideObj.deck.unshift(s.id); shuffle(sideObj.deck); EV({log:`${s.name}（精卫）衔石填海，洗回牌库。`,k:"g"}); }
   if(s.effect && s.effect.fx==="draw"){ draw(sideObj, s.effect.value||1); }
-  if(s.effect && s.effect.fx==="immuneOnce"){ sideObj.immune = true; logMsg(`${s.name}（刑天）断首犹战：你下一次致命伤害将被抵消。`,"g"); }
+  if(s.effect && s.effect.fx==="immuneOnce"){ sideObj.immune = true; EV({log:`${s.name}（刑天）断首犹战：你下一次致命伤害将被抵消。`,k:"g"}); }
 }
 
 /* ============ 破封 / 镇封 / 狂性 ============ */
@@ -491,16 +588,15 @@ function canBreak(side, slotIdx){
 function doBreak(side, slotIdx){
   const s = side.field[slotIdx];
   const cost = breakCost(s.cost);
-  if(side.poshi < cost){ logMsg(`破势不足（需 ${cost}）。`,"e"); return; }
+  if(side.poshi < cost){ EV({log:`破势不足（需 ${cost}）。`,k:"e"}); return; }
   side.poshi -= cost;
   s.broken = true;
   s.atk += CFG.breakAtk; s.hp += CFG.breakHp;
   side.brokenFlags[s.id] = true;
   s.skillUsed = false;
   G.stats.breaks++;
-  logMsg(`${s.name} 破封觉醒！${s.atk-CFG.breakAtk}/${s.hp-CFG.breakHp} → ${s.atk}/${s.hp}，获得破势技「${s.skill? s.skill.name:"—"}」。`,"p");
-  renderAll();
-  animBreak(sideFieldEl(side), slotIdx);
+  EV({log:`${s.name} 破封觉醒！${s.atk-CFG.breakAtk}/${s.hp-CFG.breakHp} → ${s.atk}/${s.hp}，获得破势技「${s.skill? s.skill.name:"—"}」。`,k:"p"});
+  EV({anim:"break", side, idx:slotIdx});
 }
 function doSeal(side, slotIdx){
   const s = side.field[slotIdx];
@@ -509,8 +605,8 @@ function doSeal(side, slotIdx){
   s.atk -= CFG.breakAtk; s.hp -= CFG.breakHp;
   side.sealedFlags[s.id] = true;
   G.stats.sealed++;
-  logMsg(`${s.name} 被镇封，翻回封印态，本局不可再破封。`,"e");
-  animSeal(sideFieldEl(side), slotIdx);
+  EV({log:`${s.name} 被镇封，翻回封印态，本局不可再破封。`,k:"e"});
+  EV({anim:"seal", side, idx:slotIdx});
   return true;
 }
 
@@ -519,7 +615,7 @@ function startTurn(side){
   side.manaCap = Math.min(CFG.manaCap, side.manaCap+1);
   side.mana = side.manaCap;
   draw(side, CFG.drawPerTurn);
-  if(auraXiang(side)){ side.hp = Math.min(CFG.hp, side.hp+1); logMsg(`${side===G.player?"你":"敌方"}祥瑞和鸣：本源 +1。`,"g"); }
+  if(auraXiang(side)){ side.hp = Math.min(CFG.hp, side.hp+1); EV({log:`${side===G.player?"你":"敌方"}祥瑞和鸣：本源 +1。`,k:"g"}); }
   side.turnPlayed = [];
   side.turnAtkDown = 0;
   fieldCreatures(side).forEach(s=>{ s.attacked=false; s.defended=false; s.frozen=false; s.skillBonus=0; s.turnAtkBuff=0; s.tauntTurn=false; s.sick=false; });
@@ -527,14 +623,15 @@ function startTurn(side){
 }
 function endTurn(){
   if(G.ended || !canActNow()) return;
+  if(G.mode==="pvp" && G.waitingPeer){ logMsg("等待对方选择防御，暂不能结束回合。","s"); if(typeof __trace==="function"){__trace("endTurn-BLOCKED-wait");} return; }
+  if(G.mode==="pvp"){ if(typeof __trace==="function"){__trace("endTurn-local");} }
   if(G.mode==="pvp"){
     pvpAct({t:"endturn"});
   }
   if(G.mode==="ai"){
     settleEnd(G.player);
     if(G.ended) return;
-    G.active = "ai"; G.turn++;
-    if(G.turn > CFG.maxTurns){ finalByTurns(); return; }
+    G.active = "ai"; // SHANHAIPO-006：turn=轮次，轮内换边不计数，回到 1P 时 +1（在 aiEndPhase）
     renderAll();
     logMsg(`—— 回合 ${G.turn}：敌方回合 ——`,"s");
     animTurn(`敌方回合 ${G.turn}`);
@@ -545,23 +642,23 @@ function endTurn(){
   settleEnd(cur);
   if(G.ended) return;
   G.active = cur===G.player?"ai":"player";
-  G.turn++;
-  if(G.turn > CFG.maxTurns){ finalByTurns(); return; }
+  if(G.active==="player"){ // 1P 新一轮开始
+    G.turn++;
+    if(G.turn > CFG.maxTurns){ finalByTurns(); return; }
+  }
   const nxt = G.active==="player"?G.player:G.ai;
   startTurn(nxt);
   renderAll();
   logMsg(`—— 回合 ${G.turn}：${sideLabel(nxt)} 的回合 ——`,"s"); animTurn(`${sideLabel(nxt)} 回合 ${G.turn}`);
 }
 function settleEnd(side){
-  // 狂性反噬
+  // 狂性反噬（SHANHAIPO-006 口径：本回合未攻击且未用破势技，被冻结豁免）
   side.field.forEach(s=>{
     if(s && s.broken && !s.attacked && !s.frozen && !s.skillUsed){
-      // 本回合未造成伤害（原型判定：未攻击且未用伤害技）
-      if(s.didDamageThisTurn){ return; }
       side.hp = Math.max(0, side.hp - CFG.rageDamage);
       G.stats.raged++;
-      animHp(side, CFG.rageDamage);
-      logMsg(`${s.name} 狂性反噬：${side===G.player?"你":"敌方"}本源 −${CFG.rageDamage}。`,"e");
+      EV({anim:"hp", side, n:CFG.rageDamage});
+      EV({log:`${s.name} 狂性反噬：${side===G.player?"你":"敌方"}本源 −${CFG.rageDamage}。`,k:"e"});
     }
     if(s){ s.didDamageThisTurn=false; }
   });
@@ -577,34 +674,34 @@ function artifactEffect(card, targetInfo, casterSide){
   if(fx.type==="damage"){
     if(fx.target==="enemyCreature"){
       const t = opp.field[targetInfo];
-      if(!t){ logMsg("目标不存在。","e"); return; }
+      if(!t){ EV({log:"目标不存在。",k:"e"}); return; }
       dealDamage(caster, {name:card.name, element:card.element, side:casterSide, broken:false, skillBonus:0}, opp, targetInfo, fx.value, true);
     }
   } else if(fx.type==="damageHp"){
     damageHpRaw(opp, fx.value, card.name);
   } else if(fx.type==="damageHpCond"){
     let d = fx.value;
-    if(fieldCreatures(caster).some(s=>s.element==="火")){ d += 2; logMsg(`${card.name}：火系神兽在场，额外 −2。`,"g"); }
+    if(fieldCreatures(caster).some(s=>s.element==="火")){ d += 2; EV({log:`${card.name}：火系神兽在场，额外 −2。`,k:"g"}); }
     damageHpRaw(opp, d, card.name);
   } else if(fx.type==="heal"){
     const t = caster.field[targetInfo];
-    if(!t){ logMsg("目标不存在。","e"); return; }
-    t.hp += fx.value; logMsg(`${card.name} 使 ${t.name} 恢复 ${fx.value} 点生命。`,"g");
+    if(!t){ EV({log:"目标不存在。",k:"e"}); return; }
+    t.hp += fx.value; EV({log:`${card.name} 使 ${t.name} 恢复 ${fx.value} 点生命。`,k:"g"});
   } else if(fx.type==="buffHp"){
     const t = caster.field[targetInfo];
-    if(!t){ logMsg("目标不存在。","e"); return; }
-    t.hp += fx.value; logMsg(`${card.name} 使 ${t.name} 生命 +${fx.value}。`,"g");
+    if(!t){ EV({log:"目标不存在。",k:"e"}); return; }
+    t.hp += fx.value; EV({log:`${card.name} 使 ${t.name} 生命 +${fx.value}。`,k:"g"});
   } else if(fx.type==="seal"){
     const t = opp.field[targetInfo];
-    if(!t){ logMsg("目标不存在。","e"); return; }
-    if(!t.broken){ logMsg(`${card.name}：${t.name} 并非破封态，镇封无效。`,"s"); return; }
+    if(!t){ EV({log:"目标不存在。",k:"e"}); return; }
+    if(!t.broken){ EV({log:`${card.name}：${t.name} 并非破封态，镇封无效。`,k:"s"}); return; }
     doSeal(opp, targetInfo);
   }
 }
 function skillEffect(side, caster, targetInfo){
   const sk = caster.skill;
   if(!sk){ return; }
-  if(side.poshi < sk.cost){ logMsg("破势不足。","e"); return; }
+  if(side.poshi < sk.cost){ EV({log:"破势不足。",k:"e"}); return; }
   side.poshi -= sk.cost;
   caster.skillUsed = true;
   G.stats.skills++;
@@ -622,21 +719,21 @@ function skillEffect(side, caster, targetInfo){
       if(!t){ return; }
       t.turnAtkBuff = (t.turnAtkBuff||0) - sk.value;
       t.frozen = true; // 原型：攻击下降以"本回合无法攻击"简化实现冻结类
-      logMsg(`${caster.name} 的「${sk.name}」：${t.name} 本回合攻击 −${sk.value}。`,"e");
+      EV({log:`${caster.name} 的「${sk.name}」：${t.name} 本回合攻击 −${sk.value}。`,k:"e"});
       break;
     }
     case "selfAtkUp": {
       caster.skillBonus = (caster.skillBonus||0) + sk.value;
-      logMsg(`${caster.name} 的「${sk.name}」：本回合攻击 +${sk.value}。`,"g");
+      EV({log:`${caster.name} 的「${sk.name}」：本回合攻击 +${sk.value}。`,k:"g"});
       break;
     }
     case "buffAll": {
       fieldCreatures(side).forEach(t=>{ t.hp += sk.value; t.skillBonus=(t.skillBonus||0)+sk.value; });
-      logMsg(`${caster.name} 的「${sk.name}」：友方神兽 +${sk.value}/+${sk.value}。`,"g");
+      EV({log:`${caster.name} 的「${sk.name}」：友方神兽 +${sk.value}/+${sk.value}。`,k:"g"});
       break;
     }
     case "draw": { draw(side, sk.value); break; }
-    case "healHp": { side.hp = Math.min(CFG.hp, side.hp+sk.value); logMsg(`${caster.name} 的「${sk.name}」：本源恢复 ${sk.value}。`,"g"); break; }
+    case "healHp": { side.hp = Math.min(CFG.hp, side.hp+sk.value); EV({log:`${caster.name} 的「${sk.name}」：本源恢复 ${sk.value}。`,k:"g"}); break; }
     case "damageHp": { damageHpRaw(opp, sk.value, caster.name+"·"+sk.name); break; }
     case "damage": {
       const t = opp.field[targetInfo];
@@ -648,19 +745,18 @@ function skillEffect(side, caster, targetInfo){
       const t = opp.field[targetInfo];
       if(!t){ return; }
       t.frozen = true;
-      logMsg(`${caster.name} 的「${sk.name}」：${t.name} 本回合无法攻击。`,"e");
+      EV({log:`${caster.name} 的「${sk.name}」：${t.name} 本回合无法攻击。`,k:"e"});
       break;
     }
     case "destroyLe3": {
       const t = opp.field[targetInfo];
       if(!t){ return; }
-      if(t.hp<=3){ killCreature(opp, targetInfo); logMsg(`${caster.name} 的「${sk.name}」吞噬了 ${t.name}。`,"e"); }
-      else { logMsg(`${t.name} 生命 ${t.hp} > 3，吞噬失败。`,"s"); }
+      if(t.hp<=3){ killCreature(opp, targetInfo); EV({log:`${caster.name} 的「${sk.name}」吞噬了 ${t.name}。`,k:"e"}); }
+      else { EV({log:`${t.name} 生命 ${t.hp} > 3，吞噬失败。`,k:"s"}); }
       break;
     }
   }
-  renderAll();
-  animSkill(sideFieldEl(side), side.field.indexOf(caster));
+  EV({anim:"skill", side, idx:side.field.indexOf(caster)});
 }
 
 /* ============ 出牌 ============ */
@@ -675,7 +771,7 @@ function playCreature(side, card, slotIdx){
   if(card.effect && card.effect.type==="onEnter"){
     if(card.effect.fx==="peek"){
       const oppHand = (side===G.player?G.ai:G.player).hand;
-      if(oppHand.length>0){ logMsg(`${card.name}（白泽）通晓万物：窥见对手手牌「${CARDS.find(c=>c.id===oppHand[0]).name}」。`,"p"); }
+      if(oppHand.length>0){ EV({log:`${card.name}（白泽）通晓万物：窥见对手手牌「${CARDS.find(c=>c.id===oppHand[0]).name}」。`,k:"p"}); }
     } else if(card.effect.fx==="damageHp"){
       const opp = side===G.player?G.ai:G.player;
       damageHpRaw(opp, card.effect.value, card.name);
@@ -689,19 +785,44 @@ function playCreature(side, card, slotIdx){
       }
     } else if(card.effect.fx==="allyAtkUp"){
       fieldCreatures(side).forEach(t=>{ if(t!==s){ t.turnAtkBuff=(t.turnAtkBuff||0)+card.effect.value; } });
-      logMsg(`${card.name}（乘黄）：友方神兽本回合 +${card.effect.value} 攻击。`,"g");
+      EV({log:`${card.name}（乘黄）：友方神兽本回合 +${card.effect.value} 攻击。`,k:"g"});
     } else if(card.effect.fx==="enemyAtkDown"){
       const opp = side===G.player?G.ai:G.player;
       const targets = fieldCreatures(opp);
       if(targets.length>0){
         const t = targets[0];
         t.turnAtkBuff=(t.turnAtkBuff||0)-card.effect.value;
-        logMsg(`${card.name}（獬豸）：${t.name} 本回合攻击 −${card.effect.value}。`,"e");
+        EV({log:`${card.name}（獬豸）：${t.name} 本回合攻击 −${card.effect.value}。`,k:"e"});
       }
     }
   }
-  renderAll();
-  animSummon(sideFieldEl(side), slotIdx);
+  EV({anim:"summon", side, idx:slotIdx});
+}
+
+/* ============ 事件流（T1-A2）：引擎产出结构化事件，表现层统一消费 ============
+ * 约束：引擎函数（战斗结算/破封/回合/效果/出牌）内禁止直接调用 logMsg / anim* / renderAll；
+ * 一律 EV() 入队，由 renderAll / showEnd 末尾的 EVflush() 消费（日志即时写出，动画进 240ms 队列）。
+ * 事件形：
+ *   {log:"文本", k:"n|e|g|p|s"}                        纯日志
+ *   {anim:"hit"|"lunge", side, idx, n, c}              灵位卡动画（hit 附伤害数字 n 与颜色 c）
+ *   {anim:"hp", side, n}                               本源扣血动画
+ *   {anim:"summon"|"break"|"seal"|"skill", side, idx}  出场/破封/镇封/破势技动画 */
+let EVQ = [];
+function EV(e){ EVQ.push(e); }
+function EVflush(){
+  if(!EVQ.length) return;
+  const q = EVQ; EVQ = [];
+  q.forEach(e=>{
+    if(e.log !== undefined){ logMsg(e.log, e.k); return; }
+    const el = (e.side !== undefined && e.side !== null) ? sideFieldEl(e.side) : null;
+    if(e.anim==="hit"){ animHit(el, e.idx, e.n, e.c); }
+    else if(e.anim==="lunge"){ animLunge(el, e.idx); }
+    else if(e.anim==="hp"){ animHp(e.side, e.n); }
+    else if(e.anim==="summon"){ animSummon(el, e.idx); }
+    else if(e.anim==="break"){ animBreak(el, e.idx); }
+    else if(e.anim==="seal"){ animSeal(el, e.idx); }
+    else if(e.anim==="skill"){ animSkill(el, e.idx); }
+  });
 }
 
 /* ============ AI ============ */
@@ -864,6 +985,8 @@ function aiEndPhase(){
   settleEnd(G.ai);
   if(G.ended) return;
   G.active = "player";
+  G.turn++; // SHANHAIPO-006：回到 1P 视为一轮，轮次在此 +1（与 endTurn/executeAct 口径一致）
+  if(G.turn > CFG.maxTurns){ finalByTurns(); return; }
   startTurn(G.player);
   renderAll();
   logMsg(`—— 回合 ${G.turn}：你的回合 ——`,"s");
@@ -872,13 +995,13 @@ function aiEndPhase(){
 function attackExec(attSide, s, defSide, idx, atk){
   s.attacked = true;
   s.didDamageThisTurn = true;
-  animLunge(sideFieldEl(attSide), attSide.field.indexOf(s));
+  EV({anim:"lunge", side:attSide, idx:attSide.field.indexOf(s)});
   dealDamage(attSide, {name:s.name, element:s.element, side:attSide===G.player?"player":"ai", broken:s.broken, skillBonus:s.skillBonus||0}, defSide, idx, atk, false);
 }
 function attackHpExec(attSide, s, atk){
   s.attacked = true;
   s.didDamageThisTurn = true;
-  animLunge(sideFieldEl(attSide), attSide.field.indexOf(s));
+  EV({anim:"lunge", side:attSide, idx:attSide.field.indexOf(s)});
   damageHpRaw(attSide===G.player?G.ai:G.player, atk, s.name);
 }
 
@@ -894,6 +1017,7 @@ function finalByTurns(){
   showEnd();
 }
 function showEnd(){
+  EVflush(); // 终局前清空事件队列，保证最后一批日志/动画可见
   const w = G.winner;
   document.getElementById("endTitle").textContent = w==="player"?"胜！":(w==="ai"?"败":"平局");
   document.getElementById("endTitle").style.color = w==="player"?"var(--good)":"var(--bad)";
@@ -902,6 +1026,12 @@ function showEnd(){
     `破封次数：${G.stats.breaks} ｜ 狂性触发：${G.stats.raged} ｜ 镇封：${G.stats.sealed}<br>`+
     `攻击次数：${G.stats.attacks} ｜ 克制攻击：${G.stats.counterAttacks}（${G.stats.attacks?Math.round(G.stats.counterAttacks/G.stats.attacks*100):0}%）<br>`+
     `破势技发动：${G.stats.skills} ｜ 重开次数：${G.stats.mulligan}`;
+  const __rec = (typeof UserSys!=="undefined") ? UserSys.recordGame(G) : null;
+  if(__rec){
+    const sm = UserSys.summary();
+    document.getElementById("endStats").innerHTML +=
+      `<br>档案已记录（${UserSys.profile.nickname}）：打AI ${sm.ai.w}胜${sm.ai.l}负${sm.ai.d}平 ｜ 在线 ${sm.pvp.w}胜${sm.pvp.l}负${sm.pvp.d}平 ｜ 同屏 ${sm.hotseat} 局`;
+  }
   document.getElementById("endBanner").style.display="flex";
 }
 function hideEnd(){ document.getElementById("endBanner").style.display="none"; }
@@ -976,7 +1106,7 @@ function animSeal(sideEl, idx){ pushAnim(()=>replay(qCard(sideEl, idx), "anim-se
 function animSkill(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-skill"); addBurst(el); }); }
 function animHp(side, num){
   pushAnim(()=>{
-    const bar = document.getElementById((side==="player"?"my":"ai")+"HpBar");
+    const bar = document.getElementById((side===mySide()?"my":"ai")+"HpBar"); // 视角修正：按本端我方判定（TDD-01）
     replay(bar, "anim-hp");
     const meter = bar ? bar.closest(".meter") : null;
     if(meter && num!=null){ const d=document.createElement("div"); d.className="dmg-num hp"; d.textContent="-"+(num||""); d.style.color="#C0392B"; meter.appendChild(d); setTimeout(()=>d.remove(),950); }
@@ -994,7 +1124,7 @@ function cardHtml(card, opts){
   let name = card.name;
   let extra = "";
   if(card.broken){ name = card.name+"·破封"; }
-  if(card.sealedFlags && card.sealedFlags[card.id]){ extra = `<span style="color:#8A7B5E;font-size:10px;margin-left:4px;">已镇封</span>`; }
+  if(opts.sealed){ extra = `<span style="color:#8A7B5E;font-size:10px;margin-left:4px;">已镇封</span>`; } // 镇封标记经 opts 传入（数据在 side.sealedFlags，见 TDD-02）
   const atk = card.atk + (opts.atkMod||0);
   const hp = card.hp;
   const skillTxt = card.skill ? `「${card.skill.name}」${card.skill.cost}破势` : "";
@@ -1029,7 +1159,7 @@ function renderField(sideEl, side, isPlayer){
       if(s.frozen) flags.push("冻结");
       if(s.tauntTurn) flags.push("守护");
       if(!s.sick && !s.attacked && !s.defended && !s.frozen) flags.push("待命");
-      slot.innerHTML = cardHtml(s, {atkMod}) + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
+      slot.innerHTML = cardHtml(s, {atkMod, sealed:!!side.sealedFlags[s.id]}) + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
       slot.dataset.slotIdx = idx;
       slot.addEventListener("click", ()=> onSlotClick(side, idx));
     }
@@ -1072,7 +1202,12 @@ function renderMeters(){
   else { tTag.textContent = `回合 ${G.turn} · ${canActNow()?"你的回合":"对方回合"}`; }
   const myZT=document.getElementById("myZoneTitle"), aiZT=document.getElementById("aiZoneTitle");
   if(G.mode==="hotseat"){ myZT.textContent="1P 战场（下方）"; aiZT.textContent="2P 战场（上方）"; }
-  else if(G.mode==="pvp"){ myZT.textContent=G.role==="p1"?"1P 战场（你）":"2P 战场（你）"; aiZT.textContent=G.role==="p1"?"2P 战场（对方）":"1P 战场（对方）"; }
+  else if(G.mode==="pvp"){
+    const meName = (typeof UserSys!=="undefined" && UserSys.profile) ? UserSys.profile.nickname : "";
+    const opName = (typeof UserSys!=="undefined" && UserSys.oppName) ? UserSys.oppName : "";
+    myZT.textContent = meName ? `${meName}（你）` : (G.role==="p1"?"1P 战场（你）":"2P 战场（你）");
+    aiZT.textContent = opName ? `${opName}（对方）` : (G.role==="p1"?"2P 战场（对方）":"1P 战场（对方）");
+  }
   else { myZT.textContent="你的战场"; aiZT.textContent="敌方（AI）"; }
   document.getElementById("myDeckInfo").textContent = `· 牌库 ${me.deck.length}`;
   document.getElementById("aiDeckInfo").textContent = `· 牌库 ${opp.deck.length}`;
@@ -1086,6 +1221,7 @@ function renderAll(){
   renderHand();
   renderActionBar();
   renderDebug();
+  EVflush();
 }
 function renderActionBar(){
   const bar = document.getElementById("actionBar");
@@ -1166,7 +1302,7 @@ function renderActionBar(){
     }
     if(s.broken){
       const sealNote = document.createElement("span");
-      sealNote.className="hint"; sealNote.textContent="（狂性：本回合未造成伤害则回合结束本源−1）";
+      sealNote.className="hint"; sealNote.textContent="（狂性：本回合未攻击且未用破势技（被冻结豁免），回合结束本源 −1）";
       bar.appendChild(sealNote);
     }
     const cancel=document.createElement("button"); cancel.className="btn small"; cancel.textContent="取消选择";
@@ -1303,6 +1439,58 @@ function renderDebug(){
     `<b>验证统计：</b>破封 ${G.stats.breaks} 次（目标场均 2–3）｜ 克制攻击 ${G.stats.counterAttacks}/${G.stats.attacks} 次（${G.stats.attacks?Math.round(G.stats.counterAttacks/G.stats.attacks*100):0}%，目标 ≥40%）｜ 狂性 ${G.stats.raged} 次｜ 破势技 ${G.stats.skills} 次｜ 回合 ${G.turn}`;
 }
 
+/* ============ 用户档案面板（本地用户系统 UI） ============ */
+function userFmtTs(ts){ const d=new Date(ts); const p=n=>String(n).padStart(2,"0"); return p(d.getMonth()+1)+"-"+p(d.getDate())+" "+p(d.getHours())+":"+p(d.getMinutes()); }
+function userModeLabel(m){ return m==="ai"?"打AI":(m==="pvp"?"在线":"同屏"); }
+function openUserPanel(){ renderUserPanel(); document.getElementById("userPanel").style.display="flex"; }
+function closeUserPanel(){ document.getElementById("userPanel").style.display="none"; }
+function saveNickname(){
+  const inp = document.getElementById("nickInput");
+  if(UserSys.setNickname(inp.value)){ logMsg("昵称已更新："+UserSys.profile.nickname,"s"); }
+  renderUserPanel(); renderMeters();
+}
+function resetProfile(){
+  if(!window.confirm("确定重置档案？昵称与全部本地战绩将被清除（不影响当前对局）。")) return;
+  UserSys.reset(); renderUserPanel(); renderMeters();
+  logMsg("档案已重置。","s");
+}
+function renderUserPanel(){
+  const box = document.getElementById("userBox");
+  if(!box || !UserSys.profile) return;
+  const p = UserSys.profile, sm = UserSys.summary();
+  const rows = UserSys.records.list.slice(-14).reverse().map(r=>{
+    const res = r.result==="win" ? `<span style="color:var(--good);font-weight:700;">胜</span>`
+              : r.result==="lose" ? `<span style="color:var(--bad);font-weight:700;">负</span>`
+              : r.result==="draw" ? `<span style="color:var(--sub);font-weight:700;">平</span>`
+              : `<span style="color:var(--sub);">${r.winner}胜</span>`;
+    const opp = r.opp ? ` vs ${r.opp}` : "";
+    return `<div style="display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px dashed var(--line);font-size:12px;">
+      <span>${userFmtTs(r.ts)} · ${userModeLabel(r.mode)}${opp}</span>
+      <span>${res} · ${r.turns}回合</span></div>`;
+  }).join("") || `<div style="color:var(--sub);padding:6px 0;">暂无战绩，完成一局后自动记录。</div>`;
+  const escNick = p.nickname.replace(/&/g,"&amp;").replace(/"/g,"&quot;");
+  box.innerHTML = `
+    <h2>我的档案</h2>
+    <div style="text-align:left;font-size:13px;line-height:1.9;">
+      <div style="display:flex;gap:6px;align-items:center;">
+        <b>昵称</b>
+        <input id="nickInput" maxlength="12" value="${escNick}" style="flex:1;min-width:0;border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:14px;background:var(--card);color:var(--ink);">
+        <button class="btn small" onclick="saveNickname()">保存</button>
+      </div>
+      <div style="color:var(--sub);font-size:11px;">游客档案 ${p.guestToken.slice(0,10)}…（仅存本设备浏览器，正式版可绑定账号云同步）</div>
+      <div style="border-top:1px solid var(--line);margin:8px 0;"></div>
+      <b>累计战绩</b>（共 ${sm.total} 局 ｜ 合计 ${sm.turns} 回合）<br>
+      打AI：${sm.ai.w}胜 ${sm.ai.l}负 ${sm.ai.d}平 ｜ 在线：${sm.pvp.w}胜 ${sm.pvp.l}负 ${sm.pvp.d}平 ｜ 同屏：${sm.hotseat} 局
+      <div style="border-top:1px solid var(--line);margin:8px 0;"></div>
+      <b>最近对局</b>
+      <div style="max-height:180px;overflow-y:auto;">${rows}</div>
+    </div>
+    <div style="margin-top:12px;">
+      <button class="btn small alert" onclick="resetProfile()">重置档案</button>
+      <button class="btn primary" onclick="closeUserPanel()">关闭</button>
+    </div>`;
+}
+
 /* ============ 在线对战（P2P WebRTC + 手动信令） ============ */
 let pc = null;
 function openMenu(){ document.getElementById("modeMenu").style.display="flex"; }
@@ -1396,17 +1584,26 @@ function onP2POpen(dc){
   G.peer = dc;
   logMsg("P2P 连接已建立，正在开局…","g");
   if(G.role==="p1"){
-    pvpSend({t:"init", seed:G.seed});
+    pvpSend({t:"init", seed:G.seed, name:(typeof UserSys!=="undefined"&&UserSys.profile)?UserSys.profile.nickname:""});
   }
 }
+function __trace(ev){ try{ (window.__msgLog=window.__msgLog||[]).push({d:Date.now()%1000000, r:G&&G.role, t:G?G.turn:null, a:G?G.active:null, w:G?!!G.waitingPeer:null, ev:ev}); }catch(e){} }
 function onPeerMsg(ev){
   let m; try{ m=JSON.parse(ev.data); }catch(e){ return; }
   if(!m || !m.t) return;
+  if(m.t!=="init"){ __trace("recv:"+JSON.stringify(m).slice(0,90)); }
+  if(m.t==="hello"){ // 对手昵称（2P→1P 回礼；旧版客户端收到未知消息自然忽略，向后兼容）
+    if(typeof UserSys!=="undefined" && m.name){ UserSys.oppName = String(m.name).slice(0,12); logMsg(`对方「${UserSys.oppName}」已就位。`,"s"); renderMeters(); }
+    return;
+  }
   if(m.t==="init" && G.role==="p2"){
-    newGame("pvp","p2", m.seed);
-    G.active = "ai"; // 1P 先手（本方视角为上方对象）
+    newGame("pvp","p2", m.seed); // newGame 置 active="player"（G.player 恒为 1P 方，1P 先手）；不得改为 "ai"，否则双方回合交叉（TDD-17 根因）
+    if(typeof UserSys!=="undefined"){
+      if(m.name){ UserSys.oppName = String(m.name).slice(0,12); }
+      pvpSend({t:"hello", name: UserSys.profile ? UserSys.profile.nickname : ""}); // 回礼昵称
+    }
     renderAll();
-    logMsg("连接成功，对局开始！1P 先手。","g");
+    logMsg(`连接成功，对局开始！${UserSys.oppName?`对手「${UserSys.oppName}」，`:""}1P 先手。`,"g");
     return;
   }
   if(m.t==="act" && m.a && G.mode==="pvp" && G.player && G.ai){
@@ -1469,13 +1666,15 @@ function executeAct(a){
     }
     case "endturn": {
       const endName = a.role==="p1" ? "player" : "ai";
-      if(G.active !== endName) break;
+      if(G.active !== endName){ __trace("SKIP-endturn:role="+a.role+" need="+endName); break; }
       const cur = G.active==="player"?G.player:G.ai;
       settleEnd(cur);
       if(G.ended) break;
       G.active = cur===G.player?"ai":"player";
-      G.turn++;
-      if(G.turn > CFG.maxTurns){ finalByTurns(); break; }
+      if(G.active==="player"){ // SHANHAIPO-006：回到 1P 视为一轮（与 endTurn/aiEndPhase 口径一致）
+        G.turn++;
+        if(G.turn > CFG.maxTurns){ finalByTurns(); break; }
+      }
       startTurn(G.active==="player"?G.player:G.ai);
       renderAll();
       const nxt = G.active==="player"?G.player:G.ai;
@@ -1488,6 +1687,7 @@ function executeAct(a){
 }
 
 /* ============ 启动 ============ */
+UserSys.init();
 openMenu();
 syncCfgInputs();
 
@@ -1552,7 +1752,7 @@ syncCfgInputs();
           if(db) db.click();
         }
         setTimeout(function(){
-          var idx = me.field.findIndex(function(s){return s && !s.attacked;});
+          var idx = (!G.waitingPeer) ? me.field.findIndex(function(s){return s && !s.attacked;}) : -1; // 等待防御应答期间不再发起新攻击（TDD-17）
           if(idx>=0){ onMySlotClick(idx);
             var ab=[...document.querySelectorAll('#actionBar button')].find(function(b){return b.textContent.trim()==='攻击';});
             if(ab){ ab.click();
@@ -1560,7 +1760,7 @@ syncCfgInputs();
               if(hb) hb.click();
             }
           }
-          setTimeout(function(){ if(canActNow()) endTurn();
+          setTimeout(function(){ if(canActNow() && !G.waitingPeer) endTurn(); // 防御未结算不得结束回合（TDD-17）
             var _op = me===G.player?G.ai:G.player;
             window.__hist.push("t"+G.turn+"|a"+G.active+"|p1hp"+G.player.hp+"|p2hp"+G.ai.hp+"|myf"+JSON.stringify(me.field.map(function(x){return x?x.name:"-";}))+"|oppf"+JSON.stringify(_op.field.map(function(x){return x?x.name:"-";})));
             setTimeout(act, 400); }, 400);

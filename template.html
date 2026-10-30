@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>山海破 · P0 可玩原型</title>
+<style>
+  :root{
+    --ink:#1A1B1C; --sub:#6B7280; --paper:#F4F1E8; --card:#FFFDF6;
+    --line:#E4E1D5; --gold:#C9A227; --accent:#7C5CBF;
+    --e-jin:#C8863A; --e-mu:#5FA85F; --e-shui:#4A90C4; --e-huo:#D2554F; --e-tu:#B89B3C;
+    --good:#3E8E4E; --bad:#C0392B;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{font-family:"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif; background:linear-gradient(160deg,#F4F1E8 0%,#E8E2D2 100%); color:var(--ink); min-height:100vh; padding:10px;}
+  .wrap{max-width:1260px; margin:0 auto;}
+  .layout{display:grid; grid-template-columns:1fr 304px; gap:14px; align-items:start;}
+  .main-col{display:flex; flex-direction:column; min-width:0;}
+  .side-col{position:sticky; top:12px; display:flex; flex-direction:column;}
+  .side-col .zone{margin-bottom:0;}
+  header{text-align:center; padding:8px 0 4px;}
+  header h1{font-size:26px; letter-spacing:6px; color:#3D2F5C;}
+  header .sub{font-size:12px; color:var(--sub); margin-top:2px;}
+  .topbar{display:flex; justify-content:space-between; align-items:center; margin:8px 0; gap:8px; flex-wrap:wrap;}
+  .btn{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:8px 14px; font-size:14px; cursor:pointer; color:var(--ink);}
+  .btn:hover{background:#F0EAD8;}
+  .btn:disabled{opacity:.4; cursor:not-allowed;}
+  .btn.primary{background:#3D2F5C; color:#FFF; border-color:#3D2F5C;}
+  .btn.primary:hover{background:#4F3F75;}
+  .btn.alert{background:var(--bad); color:#FFF; border-color:var(--bad);}
+  .btn.small{padding:4px 10px; font-size:12px;}
+
+  .zone{background:rgba(255,253,246,.75); border:1px solid var(--line); border-radius:14px; padding:10px; margin-bottom:10px;}
+  .zone-title{font-size:12px; font-weight:600; color:var(--sub); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;}
+  .meters{display:flex; gap:14px; flex-wrap:wrap; font-size:13px; align-items:center;}
+  .meter{display:flex; align-items:center; gap:6px;}
+  .meter .bar{width:120px; height:10px; background:#E4E1D5; border-radius:6px; overflow:hidden; position:relative;}
+  .meter .fill{height:100%; border-radius:6px; transition:width .25s;}
+  .meter .label{font-weight:600; min-width:64px;}
+
+  .field{display:flex; gap:10px; min-height:96px; align-items:stretch;}
+  .slot{flex:1 1 0; min-width:0; border:2px dashed var(--line); border-radius:12px; padding:6px; display:flex; flex-direction:column; gap:4px; background:rgba(0,0,0,.02);}
+  .slot.occupied{border-style:solid; border-color:var(--line); background:var(--card);}
+  .slot.hoverable{cursor:pointer;}
+  .slot.hoverable:hover{border-color:var(--accent);}
+  .slot .slot-tag{font-size:10px; color:var(--sub); text-align:center;}
+  .card{position:relative; border-radius:10px; padding:6px 8px; font-size:12px; line-height:1.35; cursor:pointer; user-select:none; border:1px solid var(--line); background:var(--card); box-shadow:0 1px 3px rgba(0,0,0,.06);}
+  .card:hover{box-shadow:0 3px 8px rgba(0,0,0,.14);}
+  .card.selected{outline:3px solid var(--accent);}
+  .card .cname{font-weight:700; font-size:13px;}
+  .card .cmeta{color:var(--sub); font-size:11px;}
+  .card .ceffect{font-size:11px; color:#4A4036; margin-top:2px;}
+  .card.broken{background:linear-gradient(135deg,#FDF0F2,#FBE3E8); border-color:#D98A94;}
+  .card.broken .cname{color:#A63244;}
+  .card.sealedmark::after{content:"封"; position:absolute; top:3px; right:6px; font-size:10px; color:#8A7B5E; border:1px solid #8A7B5E; border-radius:4px; padding:0 3px; background:rgba(255,255,255,.7);}
+  .card.dead{opacity:.55;}
+  .stats{display:flex; gap:8px; font-size:12px; font-weight:700; margin-top:3px;}
+  .stat{background:#EFEBDE; border-radius:6px; padding:1px 6px;}
+  .stat.atk{color:var(--bad);}
+  .stat.hp{color:var(--good);}
+  .stat.cost{color:var(--accent);}
+  .element-tag{display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; border-radius:50%; color:#FFF; font-size:11px; font-weight:700; margin-right:3px;}
+
+  .hand{display:flex; gap:8px; overflow-x:auto; padding:6px 2px; min-height:265px;}
+  .hand .card{min-width:126px; max-width:142px; flex:0 0 auto;}
+  .hand .card.playable{border-color:#3D2F5C;}
+  .hand .card.notplay{opacity:.55;}
+
+  .actionbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap; min-height:38px;}
+  .hint{font-size:12px; color:var(--sub);}
+  .logbox{height:120px; overflow-y:auto; font-size:12px; line-height:1.6; background:#FFFDF6; border:1px solid var(--line); border-radius:8px; padding:6px 10px;}
+  .log-zone .logbox{height:calc(100vh - 176px); min-height:430px;}
+  .logbox .lg-e{color:var(--bad);}
+  .logbox .lg-g{color:var(--good);}
+  .logbox .lg-p{color:var(--accent);}
+  .logbox .lg-s{color:var(--sub);}
+
+  .debug{background:#2B2733; color:#C9D1D9; border-radius:12px; padding:10px; margin-top:10px; font-size:12px;}
+  .debug summary{cursor:pointer; color:#8B93A5; font-weight:600;}
+  .debug .dg-grid{display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:8px;}
+  .debug label{display:flex; align-items:center; gap:6px; color:#AAB3C2;}
+  .debug input{width:56px; background:#1F1C26; color:#E6EDF3; border:1px solid #444; border-radius:5px; padding:3px 6px;}
+  .debug .stats-line{margin-top:8px; color:#E6EDF3; line-height:1.7;}
+  .debug .stats-line b{color:#FFD77A;}
+  .help{background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px; font-size:12px; line-height:1.7; color:#4A4036; margin-bottom:10px;}
+  .help summary{cursor:pointer; font-weight:600; color:#3D2F5C;}
+  .endbanner{position:fixed; inset:0; background:rgba(20,16,28,.72); display:flex; align-items:center; justify-content:center; z-index:50;}
+  .endbox{background:var(--card); border-radius:16px; padding:26px 34px; text-align:center; max-width:420px; width:90%;}
+  .endbox h2{font-size:24px; margin-bottom:8px; letter-spacing:3px;}
+  .endbox .result-stats{font-size:13px; color:var(--sub); line-height:1.8; margin:10px 0; text-align:left;}
+  .endbox .btn{margin:4px 6px;}
+  .turn-tag{font-weight:700; font-size:14px; color:#3D2F5C;}
+
+  /* ===== 卡面插画 ===== */
+  .card{display:flex; flex-direction:column; gap:3px;}
+  .card-art{width:100%; aspect-ratio:3/4; object-fit:cover; border-radius:6px; border:1px solid var(--line); background:#EFEBDE; display:block;}
+  .card .cinfo{display:flex; flex-direction:column; gap:2px; min-width:0;}
+  /* 战场灵位卡：图在左（完整竖图）、文字在右 */
+  .slot .card{flex-direction:row; align-items:stretch; gap:8px;}
+  .slot .card .card-art{width:104px; height:139px; flex:0 0 auto; aspect-ratio:auto;}
+  .slot .card .cinfo{flex:1 1 auto;}
+
+  /* ===== 战斗动画（表现层） ===== */
+  .slot{position:relative;}
+  .slot .card{transition:transform .18s ease, box-shadow .18s ease;}
+  @keyframes lunge{0%{transform:translateX(0);} 40%{transform:translateX(-20px) scale(1.05);} 100%{transform:translateX(0);}}
+  @keyframes lungeR{0%{transform:translateX(0);} 40%{transform:translateX(20px) scale(1.05);} 100%{transform:translateX(0);}}
+  @keyframes hitflash{0%{box-shadow:0 0 0 0 rgba(192,57,43,0);} 25%{box-shadow:0 0 0 6px rgba(192,57,43,.6); background:#F7D9D6;} 60%{box-shadow:0 0 0 2px rgba(192,57,43,.35);} 100%{box-shadow:0 0 0 0 rgba(192,57,43,0);}}
+  @keyframes dmgfloat{0%{opacity:0; transform:translate(-50%,6px) scale(.7);} 20%{opacity:1; transform:translate(-50%,0) scale(1.2);} 100%{opacity:0; transform:translate(-50%,-36px) scale(1);}}
+  @keyframes summonIn{0%{opacity:0; transform:scale(.4) translateY(-16px);} 60%{opacity:1; transform:scale(1.12) translateY(0);} 100%{opacity:1; transform:scale(1);}}
+  @keyframes breakglow{0%{filter:brightness(1);} 30%{filter:brightness(1.9) saturate(1.7); transform:scale(1.06); box-shadow:0 0 26px 8px rgba(201,162,39,.8);} 100%{filter:brightness(1); transform:scale(1);}}
+  @keyframes burstring{0%{opacity:.95; transform:scale(.3);} 100%{opacity:0; transform:scale(2.4);}}
+  @keyframes hpflash{0%{filter:brightness(1);} 30%{filter:brightness(2.3) saturate(2.2);} 100%{filter:brightness(1);}}
+  @keyframes turnbanner{0%{opacity:0; transform:translate(-50%,-18px);} 15%{opacity:1; transform:translate(-50%,0);} 85%{opacity:1;} 100%{opacity:0; transform:translate(-50%,6px);}}
+  @keyframes sealflash{0%{filter:brightness(1);} 40%{filter:grayscale(1) brightness(1.5);} 100%{filter:grayscale(.35) brightness(.95);}}
+  .anim-lunge{animation:lunge .5s ease;}
+  .anim-lunge-r{animation:lungeR .5s ease;}
+  .anim-hit{animation:hitflash .55s ease;}
+  .anim-summon{animation:summonIn .5s ease;}
+  .anim-break{animation:breakglow .9s ease;}
+  .anim-seal{animation:sealflash .8s ease;}
+  .anim-skill{animation:breakglow .8s ease;}
+  .anim-hp{animation:hpflash .5s ease;}
+  .dmg-num{position:absolute; top:4px; left:50%; transform:translateX(-50%); font-size:20px; font-weight:900; text-shadow:0 1px 3px rgba(0,0,0,.4); pointer-events:none; z-index:9; animation:dmgfloat .9s ease forwards;}
+  .dmg-num.hp{left:auto; right:2px; top:-8px; transform:none; animation-name:dmgfloat;}
+  .dmg-num.hp{animation:dmgfloat .9s ease forwards;}
+  .burst{position:absolute; inset:0; border-radius:10px; border:3px solid rgba(201,162,39,.95); pointer-events:none; animation:burstring .7s ease forwards; z-index:8;}
+  .turn-banner{position:fixed; top:14px; left:50%; transform:translate(-50%,0); background:rgba(61,47,92,.93); color:#FFF; padding:10px 24px; border-radius:30px; font-size:16px; letter-spacing:2px; z-index:60; animation:turnbanner 1.4s ease forwards; pointer-events:none; box-shadow:0 4px 16px rgba(0,0,0,.32);}
+
+  @media (max-width:900px){
+    .layout{grid-template-columns:1fr;}
+    .side-col{position:static;}
+    .log-zone .logbox{height:150px; min-height:150px;}
+  }
+  @media (max-width:640px){
+    .slot{min-height:80px;}
+    .hand .card{min-width:104px;}
+    .meter .bar{width:80px;}
+  }
+
+  /* ===== 模式菜单 ===== */
+  .modemenu{position:fixed; inset:0; background:rgba(20,16,28,.82); display:flex; align-items:center; justify-content:center; z-index:80;}
+  .modebox{background:var(--card); border-radius:16px; padding:26px 34px; text-align:center; max-width:460px; width:92%; max-height:90vh; overflow-y:auto;}
+  .modebox h2{font-size:22px; margin-bottom:14px; letter-spacing:4px; color:#3D2F5C;}
+  .modebox .btn{display:block; width:100%; margin:8px 0; font-size:15px;}
+  .modebox hr{border:none; border-top:1px solid var(--line); margin:12px 0;}
+  .modebox textarea{width:100%; height:60px; font-size:10px; font-family:Consolas,monospace; margin:5px 0; resize:vertical; border:1px solid var(--line); border-radius:6px; padding:4px;}
+
+  /* ===== 用户档案面板（本地用户系统） ===== */
+  .ubox{background:var(--card); border-radius:16px; padding:22px 28px; text-align:center; max-width:520px; width:92%; max-height:88vh; overflow-y:auto;}
+  .ubox h2{font-size:20px; margin-bottom:12px; letter-spacing:4px; color:#3D2F5C;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>山海破</h1>
+  <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v1.6（打AI / 同屏双人 / 在线对战 · 本地档案）</div>
+</header>
+
+<div class="topbar">
+  <div class="turn-tag" id="turnTag">回合 1 · 你的回合</div>
+  <div>
+    <button class="btn small" onclick="openMenu()">模式</button>
+    <button class="btn small" onclick="toggleHelp()">操作说明</button>
+    <button class="btn small" onclick="openUserPanel()">档案</button>
+    <button class="btn small" onclick="toggleDebug()">调试面板</button>
+    <button class="btn small alert" onclick="restartGame()">重新开局</button>
+  </div>
+</div>
+
+<div class="layout">
+<div class="main-col">
+
+<details class="help" id="helpBox" open>
+  <summary>操作说明（一屏速览）</summary>
+  ① 点击<b>手牌</b>选中（费用不足变灰）；点「部署」放到我方灵位，点「使用」对目标施放神器。<br>
+  ② 点击<b>我方灵位神兽</b>选中，操作栏出现：<b>攻击</b>（再点敌方目标）· <b>破封</b>（消耗破势翻面，+2/+2 与破势技）· <b>破势技</b>（消耗破势发动）。<br>
+  ③ <b>狂性</b>：破封神兽本回合未攻击且未用破势技（被冻结豁免），回合结束你的本源 −1。<b>镇封</b>：对方破封随从被神器/效果翻回封印态后，本局不可再破封。<br>
+  ④ <b>五行</b>：金克木克土克水克火克金，克制 +1、被克 −1（最低 1）。<b>破势</b>：每造成 3 点伤害 +1（上限 10）。<br>
+  ⑤ 祥瑞羁绊（场上祥瑞≥2）：回合开始本源+1；凶煞羁绊（场上凶煞≥2）：我方神兽攻击+1。<br>
+  ⑥ 击破对方 30 点本源获胜；30 回合未分胜负按本源判定。<br>
+  ⑦ 防御：神兽攻击对方本源时，被攻击方场上有存活神兽可点其挺身防御（代为承受伤害，五行克制照常结算）；也可放弃防御。<br>  ⑧ 模式：顶部「模式」按钮切换 —— 打AI / 同屏双人（1P下方 2P上方 轮流操作）/ 在线对战（连接码 P2P 直连）。<br>
+  ⑨ 档案：顶部「档案」查看昵称与战绩（自动记录每局结果，仅存本设备浏览器，可随时重置）。
+</details>
+
+<!-- 敌方 -->
+<div class="zone">
+  <div class="zone-title"><span id="aiZoneTitle">敌方（AI）</span><span id="aiDeckInfo" style="font-weight:400;"></span></div>
+  <div class="meters">
+    <div class="meter"><span class="label">山海本源</span><div class="bar"><div class="fill" id="aiHpBar" style="background:var(--bad);"></div></div><b id="aiHp">30</b><span style="color:var(--sub);font-size:11px;">/30</span></div>
+    <div class="meter"><span class="label">灵气</span><b id="aiMana">1</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
+    <div class="meter"><span class="label">破势</span><div class="bar"><div class="fill" id="aiPoshiBar" style="background:var(--accent);"></div></div><b id="aiPoshi">0</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
+    <div class="meter"><span class="label">手牌</span><b id="aiHand">3</b></div>
+  </div>
+  <div class="field" id="aiField"></div>
+</div>
+
+<!-- 我方 -->
+<div class="zone">
+  <div class="zone-title"><span id="myZoneTitle">你的战场</span><span id="myDeckInfo" style="font-weight:400;"></span></div>
+  <div class="meters">
+    <div class="meter"><span class="label">山海本源</span><div class="bar"><div class="fill" id="myHpBar" style="background:var(--good);"></div></div><b id="myHp">30</b><span style="color:var(--sub);font-size:11px;">/30</span></div>
+    <div class="meter"><span class="label">灵气</span><b id="myMana">1</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
+    <div class="meter"><span class="label">破势</span><div class="bar"><div class="fill" id="myPoshiBar" style="background:var(--accent);"></div></div><b id="myPoshi">0</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
+    <div class="meter"><span class="label">手牌</span><b id="myHand">3</b></div>
+  </div>
+  <div class="field" id="myField"></div>
+</div>
+
+<div class="zone">
+  <div class="zone-title"><span id="handTitle">手牌</span> <span id="handHint" class="hint"></span></div>
+  <div class="hand" id="myHandArea"></div>
+  <div class="actionbar" id="actionBar">
+    <button class="btn primary" onclick="endTurn()">结束回合</button>
+  </div>
+  <div class="hint" id="actionHint" style="margin-top:6px;">点击手牌或神兽开始操作</div>
+</div>
+
+</div><!-- /main-col -->
+
+<div class="side-col">
+<div class="zone log-zone">
+  <div class="zone-title">对战日志</div>
+  <div class="logbox" id="logBox"></div>
+</div>
+</div><!-- /side-col -->
+</div><!-- /layout -->
+
+<details class="debug" id="debugBox">
+  <summary>调试面板 · 参数与验证数据</summary>
+  <div class="dg-grid">
+    <label>破势阈值 <input id="cfgPoshiPer" type="number" min="1" max="6" step="1"></label>
+    <label>克制加成 <input id="cfgCB" type="number" min="0" max="3" step="1"></label>
+    <label>被克惩罚 <input id="cfgCP" type="number" min="0" max="3" step="1"></label>
+    <label>破势上限 <input id="cfgPC" type="number" min="4" max="15" step="1"></label>
+    <label>狂性伤害 <input id="cfgRage" type="number" min="0" max="3" step="1"></label>
+    <label>中费破封 <input id="cfgBM" type="number" min="2" max="8" step="1"></label>
+    <button class="btn small" onclick="applyCfg()">应用参数</button>
+    <button class="btn small" onclick="resetCfg()">恢复默认</button>
+  </div>
+  <div class="stats-line" id="debugStats"></div>
+  <div style="margin-top:6px;color:#8B93A5;font-size:11px;">规则集与设计契约一致：破势按每次伤害事件 floor(X/3) 结算；克制 ±1 最低 1；破封消耗按费用 3/5/7；每卡整局最多破封一次，镇封后永久失效。</div>
+</details>
+
+</div>
+
+<div class="modemenu" id="modeMenu">
+  <div class="modebox">
+    <h2>山海破 · 选择模式</h2>
+    <button class="btn" onclick="startMode('ai')">打 AI（单人）</button>
+    <button class="btn" onclick="startMode('hotseat')">同屏双人（热座）</button>
+    <hr>
+    <button class="btn" onclick="startPvp('p1')">在线对战 · 发起（1P 先手）</button>
+    <button class="btn" onclick="startPvp('p2')">在线对战 · 加入（2P 后手）</button>
+    <div id="pvpPanel" style="display:none; margin-top:10px; text-align:left;">
+      <div class="hint" id="pvpStep" style="line-height:1.6;"></div>
+      <textarea id="offerOut" readonly placeholder="连接码（发给对方）"></textarea>
+      <textarea id="offerIn" placeholder="粘贴对方连接码"></textarea>
+      <textarea id="answerOut" readonly placeholder="应答码（发给对方）"></textarea>
+      <textarea id="answerIn" placeholder="粘贴对方应答码"></textarea>
+      <div id="pvpBtns" style="text-align:center;"></div>
+    </div>
+    <button class="btn small" onclick="closeMenu()" style="margin-top:10px;">关闭（继续当前对局）</button>
+  </div>
+</div>
+
+<div class="modemenu" id="userPanel" style="display:none;">
+  <div class="ubox" id="userBox"></div>
+</div>
+
+<div class="endbanner" id="endBanner" style="display:none;">
+  <div class="endbox">
+    <h2 id="endTitle">胜</h2>
+    <div class="result-stats" id="endStats"></div>
+    <button class="btn primary" onclick="restartGame()">再来一局</button>
+    <button class="btn" onclick="hideEnd()">查看战场</button>
+  </div>
+</div>
+
+<script>
+/*__SHANHAIPO_JS__*/
+</script>
+</body>
+</html>
