@@ -3,7 +3,7 @@
  * 一律 EV() 入队，由 renderAll / showEnd 末尾的 EVflush() 消费（日志即时写出，动画进 240ms 队列）。
  * 事件形：
  *   {log:"文本", k:"n|e|g|p|s"}                        纯日志
- *   {anim:"hit"|"lunge", side, idx, n, c}              灵位卡动画（hit 附伤害数字 n 与颜色 c）
+ *   {anim:"hit"|"lunge", side, idx, n, c, crit}        灵位卡动画（hit 附伤害数字 n、颜色 c、克制暴击标记 crit）
  *   {anim:"hp", side, n}                               本源扣血动画
  *   {anim:"summon"|"break"|"seal"|"skill", side, idx}  出场/破封/镇封/破势技动画 */
 let EVQ = [];
@@ -14,13 +14,14 @@ function EVflush(){
   q.forEach(e=>{
     if(e.log !== undefined){ logMsg(e.log, e.k); return; }
     const el = (e.side !== undefined && e.side !== null) ? sideFieldEl(e.side) : null;
-    if(e.anim==="hit"){ animHit(el, e.idx, e.n, e.c); }
+    if(e.anim==="hit"){ animHit(el, e.idx, e.n, e.c, e.crit); }
     else if(e.anim==="lunge"){ animLunge(el, e.idx); }
     else if(e.anim==="hp"){ animHp(e.side, e.n); }
     else if(e.anim==="summon"){ animSummon(el, e.idx); }
     else if(e.anim==="break"){ animBreak(el, e.idx); }
     else if(e.anim==="seal"){ animSeal(el, e.idx); }
     else if(e.anim==="skill"){ animSkill(el, e.idx); }
+    else if(e.anim==="death"){ animDeath(el, e.idx); }
   });
 }
 

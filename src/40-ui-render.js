@@ -26,7 +26,15 @@ function renderField(sideEl, side, isPlayer){
   holder.innerHTML = "";
   side.field.forEach((s,idx)=>{
     const slot = document.createElement("div");
-    slot.className = "slot" + (s?" occupied":"");
+    // 状态可视化（v1.7）：ready=可行动金环 / acted=已行动压暗 / frozen=冰蓝 / brk=破封赤环
+    let cls = "slot" + (s?" occupied":"");
+    if(s){
+      if(!s.sick && !s.attacked && !s.defended && !s.frozen) cls += " ready";
+      if(s.sick || s.attacked || s.defended) cls += " acted";
+      if(s.frozen) cls += " frozen";
+      if(s.broken) cls += " brk";
+    }
+    slot.className = cls;
     if(!s){
       slot.innerHTML = `<div class="slot-tag">灵位 ${idx+1}</div>`;
       if(!isPlayer){ slot.addEventListener("click", ()=> onSlotClick(side, idx)); }
@@ -92,6 +100,14 @@ function renderMeters(){
   else { myZT.textContent="你的战场"; aiZT.textContent="敌方（AI）"; }
   document.getElementById("myDeckInfo").textContent = `· 牌库 ${me.deck.length}`;
   document.getElementById("aiDeckInfo").textContent = `· 牌库 ${opp.deck.length}`;
+  // 本源告急可视化（v1.7）：≤10 点时血条红化脉冲
+  const hpLowMark = (barId, hp) => {
+    const bar = document.getElementById(barId);
+    const meter = bar ? bar.closest(".meter") : null;
+    if(meter){ meter.classList.toggle("low", hp > 0 && hp <= 10); }
+  };
+  hpLowMark("myHpBar", me.hp);
+  hpLowMark("aiHpBar", opp.hp);
 }
 function renderAll(){
   if(G.mode==="pvp" && (!G.player || !G.ai)) return;

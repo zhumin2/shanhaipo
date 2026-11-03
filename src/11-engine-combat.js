@@ -18,17 +18,19 @@ function fieldCreatures(side){ return side.field.filter(s=>s&&s.hp>0); }
 function dealDamage(attackerSide, attacker, defSide, defSlotIdx, base, isSkill){
   // attacker: {element, atk, broken, skillBonus} 或 null（法术）
   let dmg = base;
+  let crit = false;                    // 克制命中（用于伤害数字放大发光，v1.7 表现层提示）
   const def = defSide==="hp" ? null : defSide.field[defSlotIdx];
   if(attacker && def){
     const mod = getCounterMod(attacker.element, def.element);
     dmg = Math.max(CFG.minDamage, base + mod);
+    crit = mod>0;
     G.stats.attacks++;
     if(mod>0){ G.stats.counterAttacks++; EV({log:`五行克制：${attacker.name}（${attacker.element}）克制 ${def.name}（${def.element}），伤害 +1。`,k:"g"}); }
     if(mod<0){ EV({log:`五行被克：${attacker.name}（${attacker.element}）被 ${def.name}（${def.element}）克制，伤害 −1。`,k:"e"}); }
   }
   if(def){
     def.hp -= dmg;
-    EV({anim:"hit", side:defSide, idx:defSlotIdx, n:dmg, c:dmg>base?"#C9A227":(dmg<base?"#8B5C3E":"#C0392B")});
+    EV({anim:"hit", side:defSide, idx:defSlotIdx, n:dmg, crit, c:dmg>base?"#C9A227":(dmg<base?"#8B5C3E":"#C0392B")});
     EV({log:`${attacker?attacker.name:"效果"} 对 ${def.name} 造成 ${dmg} 点伤害${mod2str(attacker,def)}。`});
     // 破势：按伤害事件 floor(X/3)
     if(attacker && attacker.side==="player"){ gainPoshi(G.player, dmg, attacker); }
@@ -72,6 +74,7 @@ function killCreature(sideObj, idx){
   if(!s) return;
   sideObj.field[idx] = null;
   sideObj.grave.push(s.id);
+  EV({anim:"death", side:sideObj, idx});   // v1.7：阵亡飘字（表现层）
   EV({log:`${s.name} 阵亡。`,k:"e"});
   if(s.effect && s.effect.fx==="reshuffle"){ sideObj.deck.unshift(s.id); shuffle(sideObj.deck); EV({log:`${s.name}（精卫）衔石填海，洗回牌库。`,k:"g"}); }
   if(s.effect && s.effect.fx==="draw"){ draw(sideObj, s.effect.value||1); }
