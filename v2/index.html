@@ -149,6 +149,122 @@
   /* ===== 用户档案面板（本地用户系统） ===== */
   .ubox{background:var(--card); border-radius:16px; padding:22px 28px; text-align:center; max-width:520px; width:92%; max-height:88vh; overflow-y:auto;}
   .ubox h2{font-size:20px; margin-bottom:12px; letter-spacing:4px; color:#3D2F5C;}
+
+  /* ===== 视觉增强 v1.7（纯 CSS，不改 DOM 结构与文案） ===== */
+  /* 宣纸质感底：双色晕染 + 细密纸纹 + 暖色渐变 */
+  body{
+    background:
+      radial-gradient(1200px 620px at 10% -6%, rgba(201,162,39,.11), transparent 62%),
+      radial-gradient(900px 520px at 92% -4%, rgba(124,92,191,.09), transparent 58%),
+      radial-gradient(700px 420px at 50% 108%, rgba(95,168,95,.06), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(26,27,28,.014) 0 1px, transparent 1px 3px),
+      linear-gradient(160deg,#F7F4EB 0%,#EFE9DA 52%,#E5DDC9 100%);
+    background-attachment:fixed;
+  }
+  /* 标题印章感：字距 + 双侧暗金细线 + 浮起阴影 */
+  header h1{position:relative; display:inline-block; padding:0 20px; font-size:30px; letter-spacing:9px;
+    color:#3D2F5C; text-shadow:0 1px 0 rgba(255,255,255,.9), 0 4px 12px rgba(61,47,92,.20);}
+  header h1::before, header h1::after{content:""; position:absolute; top:52%; width:56px; height:1px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+  header h1::before{right:100%;} header h1::after{left:100%;}
+  header .sub{letter-spacing:.5px;}
+  /* 区域/面板：微微内阴影与暗金描边，纸面叠层感 */
+  .zone{box-shadow:0 1px 0 rgba(255,255,255,.75) inset, 0 2px 10px rgba(61,47,92,.05);}
+  .zone-title{position:relative; padding-left:9px;}
+  .zone-title::before{content:""; position:absolute; left:0; top:50%; transform:translateY(-50%);
+    width:3px; height:12px; border-radius:2px; background:linear-gradient(180deg,var(--gold),rgba(201,162,39,.25));}
+  /* 卡面：墨感微调 + 悬浮提亮 */
+  .card-art{filter:saturate(.96) contrast(1.03); transition:filter .22s ease;}
+  .card:hover .card-art{filter:saturate(1.08) contrast(1.07);}
+  .card{background:linear-gradient(168deg,#FFFEF9 0%,#FFFCF2 100%);}
+  .element-tag{box-shadow:0 1px 3px rgba(0,0,0,.22), 0 0 0 1px rgba(255,255,255,.55) inset;}
+  /* 灵位状态可视化：待命金环 / 已行动压暗 / 冻结冰蓝 / 破封赤环 */
+  .slot.ready{border-color:rgba(201,162,39,.8); box-shadow:0 0 0 1px rgba(201,162,39,.30), 0 0 18px rgba(201,162,39,.22) inset;}
+  .slot.ready .slot-tag{color:#8A6B1F; font-weight:700;}
+  .slot.acted{opacity:.86;}
+  .slot.brk.acted{opacity:.92; filter:none;}
+  .slot.frozen.acted{opacity:.9; filter:none;}
+  .slot.frozen{border-color:rgba(74,144,196,.55); box-shadow:0 0 0 1px rgba(74,144,196,.35) inset, 0 0 16px rgba(74,144,196,.18) inset;}
+  .slot.frozen .card{background:linear-gradient(160deg,#EDF5FB,#DDE9F5);}
+  .slot.frozen .card-art{filter:grayscale(.42) brightness(1.07) contrast(.94);}
+  .slot.brk{border-color:rgba(217,138,148,.6); box-shadow:0 0 0 1px rgba(217,138,148,.42), 0 0 20px rgba(217,138,148,.24) inset;}
+  /* 手牌可出：暗紫描边 + 悬浮抬升 */
+  .hand .card.playable{border-color:rgba(61,47,92,.5); box-shadow:0 2px 9px rgba(61,47,92,.13);}
+  .hand .card.playable:hover{transform:translateY(-5px) scale(1.015); box-shadow:0 12px 26px rgba(61,47,92,.22);}
+  .card{transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;}
+  /* 空手牌区收拢，避免大片留白 */
+  .hand:empty{min-height:74px; align-items:center;}
+  .hand:empty::after{content:"手牌为空 · 结束回合后抽 1 张"; color:var(--sub); font-size:12px;
+    width:100%; text-align:center; letter-spacing:1px; opacity:.85;}
+  /* 伤害数字：等宽数字 + 克制暴击放大发光 */
+  .dmg-num{font-variant-numeric:tabular-nums;
+    /* 半透明纸底 + 同色描边：任何卡面/血条背景上均可读 */
+    padding:0 7px; border-radius:9px; background:rgba(255,253,246,.92);
+    border:1px solid currentColor; box-shadow:0 2px 8px rgba(0,0,0,.18);}
+  .dmg-num.crit{font-size:31px; letter-spacing:-.5px;
+    text-shadow:0 0 14px rgba(201,162,39,.95), 0 2px 7px rgba(0,0,0,.5);}
+  @keyframes critPop{0%{transform:translate(-50%,6px) scale(.5);} 22%{transform:translate(-50%,0) scale(1.45);} 100%{transform:translate(-50%,-42px) scale(1);}}
+  .dmg-num.crit{animation-name:critPop;}
+  /* 本源受击：血条容器震动 */
+  @keyframes hpShake{0%,100%{transform:translateX(0);} 18%{transform:translateX(-4px);} 38%{transform:translateX(4px);} 58%{transform:translateX(-3px);} 78%{transform:translateX(2px);}}
+  .meter.shake{animation:hpShake .45s cubic-bezier(.36,.07,.19,.97);}
+  /* 本源告急：红化脉冲 */
+  @keyframes lowPulse{0%,100%{filter:brightness(1);} 50%{filter:brightness(1.6);}}
+  .meter.low .fill{background:var(--bad) !important; animation:lowPulse 1.7s ease-in-out infinite;}
+  .meter.low b{color:var(--bad);}
+  /* 出场光环 */
+  .summon-ring{position:absolute; inset:0; border-radius:12px; border:2px solid rgba(201,162,39,.85); pointer-events:none; z-index:8;
+    animation:ringOut .68s cubic-bezier(.2,.8,.25,1) forwards;}
+  @keyframes ringOut{0%{opacity:.95; transform:scale(.55);} 100%{opacity:0; transform:scale(1.14);}}
+  /* 阵亡飘字 */
+  .death-mark{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; z-index:9;
+    font-size:17px; font-weight:900; letter-spacing:5px; color:#C0392B; pointer-events:none;
+    background:rgba(255,253,246,.9); border:1px solid rgba(192,57,43,.32); border-radius:10px; text-shadow:0 1px 5px rgba(255,255,255,.95);
+    animation:deathFade 1.1s ease forwards;}
+  @keyframes deathFade{0%{opacity:0; transform:scale(1.3);} 22%{opacity:1; transform:scale(1);} 74%{opacity:1;} 100%{opacity:0; transform:scale(.93);}}
+  /* 回合横幅：暗金描边 + 两侧纹饰 */
+  .turn-banner{top:50%; border:1px solid rgba(201,162,39,.8); letter-spacing:4px; padding:12px 30px; font-size:17px;
+    background:linear-gradient(180deg, rgba(92,72,138,.97) 0%, rgba(48,37,74,.97) 100%);
+    box-shadow:0 14px 40px rgba(0,0,0,.46), 0 0 0 3px rgba(255,255,255,.07) inset;
+    animation:turnbanner2 1.5s cubic-bezier(.2,.8,.25,1) forwards;}
+  .turn-banner::before, .turn-banner::after{content:"✦"; color:var(--gold); font-size:13px; margin:0 11px; opacity:.9;}
+  @keyframes turnbanner2{
+    0%{opacity:0; transform:translate(-50%,-50%) scale(.86); filter:blur(2px);}
+    18%{opacity:1; transform:translate(-50%,-50%) scale(1.02); filter:blur(0);}
+    26%{transform:translate(-50%,-50%) scale(1);}
+    82%{opacity:1; transform:translate(-50%,-50%) scale(1);}
+    100%{opacity:0; transform:translate(-50%,-58%) scale(.98);}
+  }
+  /* 结算卷轴 */
+  .endbox{position:relative; background:linear-gradient(180deg,#FFFEF8 0%,#FAF5E7 100%);
+    border:1px solid rgba(201,162,39,.5);
+    box-shadow:0 26px 64px rgba(20,16,28,.42), 0 0 0 6px rgba(255,253,246,.55) inset;
+    animation:unroll .62s cubic-bezier(.2,.85,.25,1);}
+  @keyframes unroll{0%{opacity:0; transform:scale(.92) translateY(16px);} 100%{opacity:1; transform:none;}}
+  .endbox h2{font-size:30px; letter-spacing:11px; text-shadow:0 2px 0 rgba(255,255,255,.92), 0 9px 22px rgba(61,47,92,.24);}
+  .endbox h2::after{content:""; display:block; width:104px; height:1px; margin:11px auto 0;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);}
+  /* 按钮：微立体 + 按压反馈 */
+  .btn{transition:transform .12s ease, background .16s ease, box-shadow .16s ease;
+    box-shadow:0 1px 0 rgba(255,255,255,.85) inset, 0 1px 3px rgba(0,0,0,.07);}
+  .btn:not(:disabled):hover{transform:translateY(-1px);}
+  .btn:not(:disabled):active{transform:translateY(1px) scale(.99);}
+  .btn.primary{background:linear-gradient(180deg,#4B3A6B 0%,#342754 100%); border-color:#342754;}
+  .btn.primary:hover{background:linear-gradient(180deg,#5A4780 0%,#3E3062 100%);}
+  /* 日志新行淡入 + 滚动条暗金化 */
+  .logbox div{animation:logIn .28s ease;}
+  @keyframes logIn{from{opacity:0; transform:translateY(-3px);} to{opacity:1; transform:none;}}
+  ::-webkit-scrollbar{width:9px; height:9px;}
+  ::-webkit-scrollbar-track{background:rgba(228,225,213,.45); border-radius:6px;}
+  ::-webkit-scrollbar-thumb{background:rgba(201,162,39,.42); border-radius:6px;}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(201,162,39,.68);}
+  /* 无障碍：尊重系统"减少动态效果"设置 */
+  @media (prefers-reduced-motion: reduce){
+    *, *::before, *::after{
+      animation-duration:.001ms !important; animation-iteration-count:1 !important;
+      transition-duration:.001ms !important; scroll-behavior:auto !important;
+    }
+  }
 </style>
 </head>
 <body>
@@ -156,7 +272,7 @@
 
 <header>
   <h1>山海破</h1>
-  <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v1.6（打AI / 同屏双人 / 在线对战 · 本地档案）</div>
+  <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v1.7（打AI / 同屏双人 / 在线对战 · 本地档案）</div>
 </header>
 
 <div class="topbar">
@@ -512,17 +628,19 @@ function fieldCreatures(side){ return side.field.filter(s=>s&&s.hp>0); }
 function dealDamage(attackerSide, attacker, defSide, defSlotIdx, base, isSkill){
   // attacker: {element, atk, broken, skillBonus} 或 null（法术）
   let dmg = base;
+  let crit = false;                    // 克制命中（用于伤害数字放大发光，v1.7 表现层提示）
   const def = defSide==="hp" ? null : defSide.field[defSlotIdx];
   if(attacker && def){
     const mod = getCounterMod(attacker.element, def.element);
     dmg = Math.max(CFG.minDamage, base + mod);
+    crit = mod>0;
     G.stats.attacks++;
     if(mod>0){ G.stats.counterAttacks++; EV({log:`五行克制：${attacker.name}（${attacker.element}）克制 ${def.name}（${def.element}），伤害 +1。`,k:"g"}); }
     if(mod<0){ EV({log:`五行被克：${attacker.name}（${attacker.element}）被 ${def.name}（${def.element}）克制，伤害 −1。`,k:"e"}); }
   }
   if(def){
     def.hp -= dmg;
-    EV({anim:"hit", side:defSide, idx:defSlotIdx, n:dmg, c:dmg>base?"#C9A227":(dmg<base?"#8B5C3E":"#C0392B")});
+    EV({anim:"hit", side:defSide, idx:defSlotIdx, n:dmg, crit, c:dmg>base?"#C9A227":(dmg<base?"#8B5C3E":"#C0392B")});
     EV({log:`${attacker?attacker.name:"效果"} 对 ${def.name} 造成 ${dmg} 点伤害${mod2str(attacker,def)}。`});
     // 破势：按伤害事件 floor(X/3)
     if(attacker && attacker.side==="player"){ gainPoshi(G.player, dmg, attacker); }
@@ -566,6 +684,7 @@ function killCreature(sideObj, idx){
   if(!s) return;
   sideObj.field[idx] = null;
   sideObj.grave.push(s.id);
+  EV({anim:"death", side:sideObj, idx});   // v1.7：阵亡飘字（表现层）
   EV({log:`${s.name} 阵亡。`,k:"e"});
   if(s.effect && s.effect.fx==="reshuffle"){ sideObj.deck.unshift(s.id); shuffle(sideObj.deck); EV({log:`${s.name}（精卫）衔石填海，洗回牌库。`,k:"g"}); }
   if(s.effect && s.effect.fx==="draw"){ draw(sideObj, s.effect.value||1); }
@@ -821,7 +940,7 @@ function playCreature(side, card, slotIdx){
  * 一律 EV() 入队，由 renderAll / showEnd 末尾的 EVflush() 消费（日志即时写出，动画进 240ms 队列）。
  * 事件形：
  *   {log:"文本", k:"n|e|g|p|s"}                        纯日志
- *   {anim:"hit"|"lunge", side, idx, n, c}              灵位卡动画（hit 附伤害数字 n 与颜色 c）
+ *   {anim:"hit"|"lunge", side, idx, n, c, crit}        灵位卡动画（hit 附伤害数字 n、颜色 c、克制暴击标记 crit）
  *   {anim:"hp", side, n}                               本源扣血动画
  *   {anim:"summon"|"break"|"seal"|"skill", side, idx}  出场/破封/镇封/破势技动画 */
 let EVQ = [];
@@ -832,13 +951,14 @@ function EVflush(){
   q.forEach(e=>{
     if(e.log !== undefined){ logMsg(e.log, e.k); return; }
     const el = (e.side !== undefined && e.side !== null) ? sideFieldEl(e.side) : null;
-    if(e.anim==="hit"){ animHit(el, e.idx, e.n, e.c); }
+    if(e.anim==="hit"){ animHit(el, e.idx, e.n, e.c, e.crit); }
     else if(e.anim==="lunge"){ animLunge(el, e.idx); }
     else if(e.anim==="hp"){ animHp(e.side, e.n); }
     else if(e.anim==="summon"){ animSummon(el, e.idx); }
     else if(e.anim==="break"){ animBreak(el, e.idx); }
     else if(e.anim==="seal"){ animSeal(el, e.idx); }
     else if(e.anim==="skill"){ animSkill(el, e.idx); }
+    else if(e.anim==="death"){ animDeath(el, e.idx); }
   });
 }
 
@@ -1115,23 +1235,46 @@ function qSlot(sideEl, idx){ return document.querySelector(`#${sideEl} .slot[dat
 function qCard(sideEl, idx){ const s = qSlot(sideEl, idx); return s ? s.querySelector(".card") : null; }
 function replay(el, cls){ if(!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
 function addBurst(el){ if(!el || el.querySelector(".burst")) return; const b = document.createElement("div"); b.className="burst"; el.appendChild(b); setTimeout(()=>b.remove(), 750); }
+// v1.7：出场扩散光环（挂在灵位容器上，避免被全量重绘覆盖）
+function addRing(el){
+  if(!el) return;
+  const slot = el.closest ? el.closest(".slot") : null;
+  if(!slot || slot.querySelector(".summon-ring")) return;
+  const r = document.createElement("div"); r.className="summon-ring"; slot.appendChild(r); setTimeout(()=>r.remove(), 720);
+}
 function sideFieldEl(side){ return side===G.player ? "myField" : "aiField"; }
 function animLunge(sideEl, idx){ pushAnim(()=>replay(qCard(sideEl, idx), sideEl==="myField"?"anim-lunge":"anim-lunge-r")); }
-function animHit(sideEl, idx, num, color){
+function animHit(sideEl, idx, num, color, crit){
   pushAnim(()=>{
     replay(qCard(sideEl, idx), "anim-hit");
-    if(num!=null){ const slot=qSlot(sideEl, idx); if(slot){ const d=document.createElement("div"); d.className="dmg-num"; d.textContent="-"+(num||""); d.style.color=color||"#C0392B"; slot.appendChild(d); setTimeout(()=>d.remove(),950); } }
+    if(num!=null){ const slot=qSlot(sideEl, idx); if(slot){
+      const d=document.createElement("div");
+      d.className="dmg-num" + (crit?" crit":"");
+      d.textContent="-"+(num||"");
+      d.style.color=color||"#C0392B";
+      slot.appendChild(d); setTimeout(()=>d.remove(), crit?1150:950);
+    } }
   });
 }
-function animSummon(sideEl, idx){ pushAnim(()=>replay(qCard(sideEl, idx), "anim-summon")); }
+function animSummon(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-summon"); addRing(el); }); }
 function animBreak(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-break"); addBurst(el); }); }
 function animSeal(sideEl, idx){ pushAnim(()=>replay(qCard(sideEl, idx), "anim-seal")); }
 function animSkill(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-skill"); addBurst(el); }); }
+// v1.7：阵亡飘字（灵位仍存在，卡牌已被移除）
+function animDeath(sideEl, idx){
+  pushAnim(()=>{
+    const slot = qSlot(sideEl, idx);
+    if(!slot || slot.querySelector(".death-mark")) return;
+    const m = document.createElement("div"); m.className="death-mark"; m.textContent="阵亡";
+    slot.appendChild(m); setTimeout(()=>m.remove(), 1150);
+  });
+}
 function animHp(side, num){
   pushAnim(()=>{
     const bar = document.getElementById((side===mySide()?"my":"ai")+"HpBar"); // 视角修正：按本端我方判定（TDD-01）
     replay(bar, "anim-hp");
     const meter = bar ? bar.closest(".meter") : null;
+    if(meter){ replay(meter, "shake"); } // v1.7：本源受击震动
     if(meter && num!=null){ const d=document.createElement("div"); d.className="dmg-num hp"; d.textContent="-"+(num||""); d.style.color="#C0392B"; meter.appendChild(d); setTimeout(()=>d.remove(),950); }
   });
 }
@@ -1168,7 +1311,15 @@ function renderField(sideEl, side, isPlayer){
   holder.innerHTML = "";
   side.field.forEach((s,idx)=>{
     const slot = document.createElement("div");
-    slot.className = "slot" + (s?" occupied":"");
+    // 状态可视化（v1.7）：ready=可行动金环 / acted=已行动压暗 / frozen=冰蓝 / brk=破封赤环
+    let cls = "slot" + (s?" occupied":"");
+    if(s){
+      if(!s.sick && !s.attacked && !s.defended && !s.frozen) cls += " ready";
+      if(s.sick || s.attacked || s.defended) cls += " acted";
+      if(s.frozen) cls += " frozen";
+      if(s.broken) cls += " brk";
+    }
+    slot.className = cls;
     if(!s){
       slot.innerHTML = `<div class="slot-tag">灵位 ${idx+1}</div>`;
       if(!isPlayer){ slot.addEventListener("click", ()=> onSlotClick(side, idx)); }
@@ -1234,6 +1385,14 @@ function renderMeters(){
   else { myZT.textContent="你的战场"; aiZT.textContent="敌方（AI）"; }
   document.getElementById("myDeckInfo").textContent = `· 牌库 ${me.deck.length}`;
   document.getElementById("aiDeckInfo").textContent = `· 牌库 ${opp.deck.length}`;
+  // 本源告急可视化（v1.7）：≤10 点时血条红化脉冲
+  const hpLowMark = (barId, hp) => {
+    const bar = document.getElementById(barId);
+    const meter = bar ? bar.closest(".meter") : null;
+    if(meter){ meter.classList.toggle("low", hp > 0 && hp <= 10); }
+  };
+  hpLowMark("myHpBar", me.hp);
+  hpLowMark("aiHpBar", opp.hp);
 }
 function renderAll(){
   if(G.mode==="pvp" && (!G.player || !G.ai)) return;
