@@ -89,15 +89,18 @@ function renderMeters(){
   if(G.mode==="ai"){ tTag.textContent = `回合 ${G.turn} · ${G.active==="player"?"你的回合":"敌方回合"}`; }
   else if(G.mode==="hotseat"){ tTag.textContent = `回合 ${G.turn} · ${G.active==="player"?"1P 回合":"2P 回合"}`; }
   else { tTag.textContent = `回合 ${G.turn} · ${canActNow()?"你的回合":"对方回合"}`; }
-  const myZT=document.getElementById("myZoneTitle"), aiZT=document.getElementById("aiZoneTitle");
-  if(G.mode==="hotseat"){ myZT.textContent="1P 战场（下方）"; aiZT.textContent="2P 战场（上方）"; }
-  else if(G.mode==="pvp"){
-    const meName = (typeof UserSys!=="undefined" && UserSys.profile) ? UserSys.profile.nickname : "";
-    const opName = (typeof UserSys!=="undefined" && UserSys.oppName) ? UserSys.oppName : "";
-    myZT.textContent = meName ? `${meName}（你）` : (G.role==="p1"?"1P 战场（你）":"2P 战场（你）");
-    aiZT.textContent = opName ? `${opName}（对方）` : (G.role==="p1"?"2P 战场（对方）":"1P 战场（对方）");
+  // HUD 名称（v1.8：双方本源与阵营名上移到 HUD，战场区标题改为静态标签）
+  const myZN = document.getElementById("myHudName"), aiZN = document.getElementById("aiHudName");
+  if(myZN && aiZN){
+    if(G.mode==="hotseat"){ myZN.textContent = "1P（下方）"; aiZN.textContent = "2P（上方）"; }
+    else if(G.mode==="pvp"){
+      const meName = (typeof UserSys!=="undefined" && UserSys.profile) ? UserSys.profile.nickname : "";
+      const opName = (typeof UserSys!=="undefined" && UserSys.oppName) ? UserSys.oppName : "";
+      myZN.textContent = meName ? `${meName}（你）` : (G.role==="p1" ? "1P（你）" : "2P（你）");
+      aiZN.textContent = opName ? `${opName}（对方）` : (G.role==="p1" ? "2P（对方）" : "1P（对方）");
+    }
+    else { myZN.textContent = "你"; aiZN.textContent = "敌方（AI）"; }
   }
-  else { myZT.textContent="你的战场"; aiZT.textContent="敌方（AI）"; }
   document.getElementById("myDeckInfo").textContent = `· 牌库 ${me.deck.length}`;
   document.getElementById("aiDeckInfo").textContent = `· 牌库 ${opp.deck.length}`;
   // 本源告急可视化（v1.7）：≤10 点时血条红化脉冲

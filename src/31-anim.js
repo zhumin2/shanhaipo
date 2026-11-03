@@ -21,6 +21,23 @@ function addRing(el){
   const r = document.createElement("div"); r.className="summon-ring"; slot.appendChild(r); setTimeout(()=>r.remove(), 720);
 }
 function sideFieldEl(side){ return side===G.player ? "myField" : "aiField"; }
+// v1.8：金色墨点迸发（破封/阵亡时）。偏移表为固定值——不使用随机数，保持 UI 层无随机源。
+const MOTE_OFFSETS = [[-34,-42],[30,-48],[-15,-58],[13,-60],[-41,-24],[39,-28],[0,-66]];
+function goldBurst(el){
+  if(!el) return;
+  const host = el.closest ? (el.closest(".slot") || el) : el;
+  if(!host || host.querySelector(".gold-mote")) return;
+  MOTE_OFFSETS.forEach((off,i)=>{
+    const m = document.createElement("div");
+    m.className = "gold-mote";
+    m.style.left = "50%"; m.style.top = "46%";
+    m.style.setProperty("--dx", off[0]+"px");
+    m.style.setProperty("--dy", off[1]+"px");
+    m.style.animationDelay = (i*24)+"ms";
+    host.appendChild(m);
+    setTimeout(()=>m.remove(), 1150 + i*24);
+  });
+}
 function animLunge(sideEl, idx){ pushAnim(()=>replay(qCard(sideEl, idx), sideEl==="myField"?"anim-lunge":"anim-lunge-r")); }
 function animHit(sideEl, idx, num, color, crit){
   pushAnim(()=>{
@@ -35,7 +52,7 @@ function animHit(sideEl, idx, num, color, crit){
   });
 }
 function animSummon(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-summon"); addRing(el); }); }
-function animBreak(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-break"); addBurst(el); }); }
+function animBreak(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-break"); addBurst(el); goldBurst(el); }); }
 function animSeal(sideEl, idx){ pushAnim(()=>replay(qCard(sideEl, idx), "anim-seal")); }
 function animSkill(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-skill"); addBurst(el); }); }
 // v1.7：阵亡飘字（灵位仍存在，卡牌已被移除）
@@ -44,7 +61,7 @@ function animDeath(sideEl, idx){
     const slot = qSlot(sideEl, idx);
     if(!slot || slot.querySelector(".death-mark")) return;
     const m = document.createElement("div"); m.className="death-mark"; m.textContent="阵亡";
-    slot.appendChild(m); setTimeout(()=>m.remove(), 1150);
+    slot.appendChild(m); goldBurst(slot); setTimeout(()=>m.remove(), 1150);
   });
 }
 function animHp(side, num){

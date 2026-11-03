@@ -1,6 +1,6 @@
 /* ============ 调试面板 ============ */
-function toggleHelp(){ const b=document.getElementById("helpBox"); b.open=!b.open; }
-function toggleDebug(){ const b=document.getElementById("debugBox"); b.open=!b.open; }
+function toggleHelp(){ const p=document.getElementById("helpPanel"); if(p){ p.style.display = (p.style.display==="none" ? "flex" : "none"); } }
+function toggleDebug(){ const p=document.getElementById("debugPanel"); if(p){ p.style.display = (p.style.display==="none" ? "flex" : "none"); } }
 function syncCfgInputs(){
   document.getElementById("cfgPoshiPer").value=CFG.poshiPer;
   document.getElementById("cfgCB").value=CFG.counterBonus;

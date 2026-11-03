@@ -18,9 +18,9 @@
   .main-col{display:flex; flex-direction:column; min-width:0;}
   .side-col{position:sticky; top:12px; display:flex; flex-direction:column;}
   .side-col .zone{margin-bottom:0;}
-  header{text-align:center; padding:8px 0 4px;}
+  header{text-align:center; padding:2px 0 0;}
   header h1{font-size:26px; letter-spacing:6px; color:#3D2F5C;}
-  header .sub{font-size:12px; color:var(--sub); margin-top:2px;}
+  header .sub{font-size:11px; color:var(--sub); margin-top:1px;}
   .topbar{display:flex; justify-content:space-between; align-items:center; margin:8px 0; gap:8px; flex-wrap:wrap;}
   .btn{background:var(--card); border:1px solid var(--line); border-radius:8px; padding:8px 14px; font-size:14px; cursor:pointer; color:var(--ink);}
   .btn:hover{background:#F0EAD8;}
@@ -30,7 +30,7 @@
   .btn.alert{background:var(--bad); color:#FFF; border-color:var(--bad);}
   .btn.small{padding:4px 10px; font-size:12px;}
 
-  .zone{background:rgba(255,253,246,.75); border:1px solid var(--line); border-radius:14px; padding:10px; margin-bottom:10px;}
+  .zone{background:rgba(255,253,246,.75); border:1px solid var(--line); border-radius:14px; padding:7px 10px; margin-bottom:7px;}
   .zone-title{font-size:12px; font-weight:600; color:var(--sub); margin-bottom:6px; display:flex; justify-content:space-between; align-items:center;}
   .meters{display:flex; gap:14px; flex-wrap:wrap; font-size:13px; align-items:center;}
   .meter{display:flex; align-items:center; gap:6px;}
@@ -38,7 +38,7 @@
   .meter .fill{height:100%; border-radius:6px; transition:width .25s;}
   .meter .label{font-weight:600; min-width:64px;}
 
-  .field{display:flex; gap:10px; min-height:96px; align-items:stretch;}
+  .field{display:flex; gap:10px; min-height:84px; align-items:stretch;}
   .slot{flex:1 1 0; min-width:0; border:2px dashed var(--line); border-radius:12px; padding:6px; display:flex; flex-direction:column; gap:4px; background:rgba(0,0,0,.02);}
   .slot.occupied{border-style:solid; border-color:var(--line); background:var(--card);}
   .slot.hoverable{cursor:pointer;}
@@ -62,11 +62,11 @@
   .element-tag{display:inline-block; width:16px; height:16px; line-height:16px; text-align:center; border-radius:50%; color:#FFF; font-size:11px; font-weight:700; margin-right:3px;}
 
   .hand{display:flex; gap:8px; overflow-x:auto; padding:6px 2px; min-height:265px;}
-  .hand .card{min-width:126px; max-width:142px; flex:0 0 auto;}
+  .hand .card{min-width:100px; max-width:118px; flex:0 0 auto;}
   .hand .card.playable{border-color:#3D2F5C;}
   .hand .card.notplay{opacity:.55;}
 
-  .actionbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap; min-height:38px;}
+  .actionbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap; min-height:34px;}
   .hint{font-size:12px; color:var(--sub);}
   .logbox{height:120px; overflow-y:auto; font-size:12px; line-height:1.6; background:#FFFDF6; border:1px solid var(--line); border-radius:8px; padding:6px 10px;}
   .log-zone .logbox{height:calc(100vh - 176px); min-height:430px;}
@@ -97,7 +97,7 @@
   .card .cinfo{display:flex; flex-direction:column; gap:2px; min-width:0;}
   /* 战场灵位卡：图在左（完整竖图）、文字在右 */
   .slot .card{flex-direction:row; align-items:stretch; gap:8px;}
-  .slot .card .card-art{width:104px; height:139px; flex:0 0 auto; aspect-ratio:auto;}
+  .slot .card .card-art{width:86px; height:115px; flex:0 0 auto; aspect-ratio:auto;}
   .slot .card .cinfo{flex:1 1 auto;}
 
   /* ===== 战斗动画（表现层） ===== */
@@ -107,7 +107,7 @@
   @keyframes lungeR{0%{transform:translateX(0);} 40%{transform:translateX(20px) scale(1.05);} 100%{transform:translateX(0);}}
   @keyframes hitflash{0%{box-shadow:0 0 0 0 rgba(192,57,43,0);} 25%{box-shadow:0 0 0 6px rgba(192,57,43,.6); background:#F7D9D6;} 60%{box-shadow:0 0 0 2px rgba(192,57,43,.35);} 100%{box-shadow:0 0 0 0 rgba(192,57,43,0);}}
   @keyframes dmgfloat{0%{opacity:0; transform:translate(-50%,6px) scale(.7);} 20%{opacity:1; transform:translate(-50%,0) scale(1.2);} 100%{opacity:0; transform:translate(-50%,-36px) scale(1);}}
-  @keyframes summonIn{0%{opacity:0; transform:scale(.4) translateY(-16px);} 60%{opacity:1; transform:scale(1.12) translateY(0);} 100%{opacity:1; transform:scale(1);}}
+  @keyframes summonIn{0%{opacity:.18; transform:scale(.45) translateY(-14px);} 60%{opacity:1; transform:scale(1.1) translateY(0);} 100%{opacity:1; transform:scale(1);}}
   @keyframes breakglow{0%{filter:brightness(1);} 30%{filter:brightness(1.9) saturate(1.7); transform:scale(1.06); box-shadow:0 0 26px 8px rgba(201,162,39,.8);} 100%{filter:brightness(1); transform:scale(1);}}
   @keyframes burstring{0%{opacity:.95; transform:scale(.3);} 100%{opacity:0; transform:scale(2.4);}}
   @keyframes hpflash{0%{filter:brightness(1);} 30%{filter:brightness(2.3) saturate(2.2);} 100%{filter:brightness(1);}}
@@ -162,7 +162,7 @@
     background-attachment:fixed;
   }
   /* 标题印章感：字距 + 双侧暗金细线 + 浮起阴影 */
-  header h1{position:relative; display:inline-block; padding:0 20px; font-size:30px; letter-spacing:9px;
+  header h1{position:relative; display:inline-block; padding:0 20px; font-size:23px; letter-spacing:7px;
     color:#3D2F5C; text-shadow:0 1px 0 rgba(255,255,255,.9), 0 4px 12px rgba(61,47,92,.20);}
   header h1::before, header h1::after{content:""; position:absolute; top:52%; width:56px; height:1px;
     background:linear-gradient(90deg,transparent,var(--gold),transparent);}
@@ -258,7 +258,143 @@
   ::-webkit-scrollbar-track{background:rgba(228,225,213,.45); border-radius:6px;}
   ::-webkit-scrollbar-thumb{background:rgba(201,162,39,.42); border-radius:6px;}
   ::-webkit-scrollbar-thumb:hover{background:rgba(201,162,39,.68);}
-  /* 无障碍：尊重系统"减少动态效果"设置 */
+  /* ===== 布局重构 v1.8：HUD 信息架构 + 敌我对称景深 + 水墨氛围 ===== */
+  /* 顶栏只放导航按钮，回合信息上移到 HUD */
+  .topbar{justify-content:flex-end; margin:4px 0 6px;}
+  .topbar .nav{display:flex; gap:6px; flex-wrap:wrap;}
+  /* HUD：左侧敌方本源 ← 中间回合印记 → 右侧己方本源（对峙式布局） */
+  .hud{display:grid; grid-template-columns:1fr auto 1fr; gap:14px; align-items:center;
+    background:linear-gradient(180deg, rgba(255,254,248,.94), rgba(250,245,233,.88));
+    border:1px solid var(--line); border-radius:14px; padding:7px 16px; margin-bottom:8px;
+    box-shadow:0 2px 14px rgba(61,47,92,.08), 0 1px 0 rgba(255,255,255,.92) inset;}
+  .hud-side{display:flex; flex-direction:column; gap:5px; min-width:0;}
+  .hud-enemy{align-items:flex-end; text-align:right;}
+  .hud-self{align-items:flex-start;}
+  .hud-name{font-size:11px; font-weight:700; letter-spacing:1.5px; color:var(--sub);
+    max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .hud-enemy .hud-name{color:#8C3A33;}
+  .hud-self .hud-name{color:#2F6B3C;}
+  .hud .meter{width:100%; display:flex; align-items:center; gap:7px;}
+  .hud .bar{flex:1 1 auto; width:auto; height:13px; border-radius:8px; background:rgba(168,160,140,.34);
+    overflow:hidden; box-shadow:inset 0 1px 4px rgba(0,0,0,.16), 0 0 0 1px rgba(120,110,90,.18);}
+  .hud-enemy .bar{direction:rtl;}       /* 敌方血条自右向左消减，形成对峙 */
+  .hud .fill{height:100%; border-radius:8px; transition:width .32s cubic-bezier(.2,.8,.25,1);}
+  .hud-hp{font-size:23px; font-weight:900; line-height:1; font-variant-numeric:tabular-nums; color:var(--ink);}
+  .hud-max{font-size:10px; color:var(--sub); margin-left:-3px;}
+  .hud .meter.low b.hud-hp{color:var(--bad);}
+  .hud-mid{display:flex; flex-direction:column; align-items:center; gap:3px; padding:0 8px;}
+  .hud-turn{font-size:12px; font-weight:700; color:#3D2F5C; letter-spacing:1.5px; white-space:nowrap;}
+  .hud-seal{font-size:10px; letter-spacing:6px; color:var(--gold); opacity:.85; padding-left:6px;
+    border-top:1px solid rgba(201,162,39,.35); padding-top:3px;}
+  /* 敌我分区：敌方墨底赤线（压暗），己方纸底玉线（明亮） */
+  .zone-enemy{background:linear-gradient(180deg, rgba(52,41,70,.075) 0%, rgba(255,253,246,.72) 46%);
+    border-color:rgba(192,57,43,.26);}
+  .zone-enemy .zone-title{color:#8C3A33;}
+  .zone-enemy .zone-title::before{background:linear-gradient(180deg,#C0392B,rgba(192,57,43,.18));}
+  .zone-self{background:linear-gradient(180deg, rgba(62,142,78,.065) 0%, rgba(255,253,246,.80) 46%);
+    border-color:rgba(62,142,78,.28);}
+  .zone-self .zone-title{color:#2F6B3C;}
+  .zone-self .zone-title::before{background:linear-gradient(180deg,#3E8E4E,rgba(62,142,78,.18));}
+  .zone-hand{background:linear-gradient(180deg, rgba(124,92,191,.045) 0%, rgba(255,253,246,.82) 50%);}
+  .zone .meters{gap:16px; font-size:12px;}
+  .zone .meter .bar{width:84px; height:8px;}
+  .zone .mx{color:var(--sub); font-size:10px; margin-left:-3px;}
+  /* 中场分隔：暗金细线 + 「破」字印章 */
+  .field-divider{position:relative; height:18px; margin:-5px 0 3px; display:flex; align-items:center; justify-content:center;}
+  .field-divider::before{content:""; position:absolute; left:6%; right:6%; top:50%; height:1px;
+    background:linear-gradient(90deg, transparent, rgba(201,162,39,.55) 18%, rgba(201,162,39,.55) 82%, transparent);}
+  .divider-seal{position:relative; z-index:1; width:25px; height:25px; display:grid; place-items:center;
+    border-radius:5px; font-size:13px; font-weight:700; color:#8A6B1F;
+    background:linear-gradient(160deg,#FFFDF4,#F2E8CF);
+    border:1px solid rgba(201,162,39,.75); box-shadow:0 2px 7px rgba(61,47,92,.14);}
+  /* 手牌交互：悬浮抬升 / 选中金边（覆盖原有紫色描边） */
+  .hand{padding:10px 2px 2px; min-height:150px; gap:9px;}
+  .hand .card{transition:transform .18s cubic-bezier(.2,.8,.25,1), box-shadow .2s ease, border-color .2s ease, filter .2s ease;}
+  .hand .card.selected{outline:none; transform:translateY(-11px) scale(1.055); z-index:4;
+    border-color:rgba(201,162,39,.95);
+    box-shadow:0 0 0 2px rgba(201,162,39,.55), 0 18px 34px rgba(61,47,92,.30);}
+  .hand .card.selected::before{content:"✦"; position:absolute; top:-12px; left:50%; transform:translateX(-50%);
+    color:var(--gold); font-size:13px; text-shadow:0 0 8px rgba(201,162,39,.9);}
+  .hand .card.playable:hover{transform:translateY(-8px) scale(1.05); z-index:3;
+    box-shadow:0 16px 30px rgba(61,47,92,.26);}
+  .hand .card.notplay{opacity:.52; filter:grayscale(.5) saturate(.7);}
+  /* 卡片纸感暗角 */
+  .card::after{content:""; position:absolute; inset:0; border-radius:10px; pointer-events:none;
+    box-shadow:inset 0 0 26px rgba(64,46,18,.13);}
+  /* 水墨氛围：缓慢流动的墨晕底层 */
+  body::before{content:""; position:fixed; inset:-15%; z-index:0; pointer-events:none;
+    background:
+      radial-gradient(50% 38% at 20% 16%, rgba(58,46,80,.10), transparent 62%),
+      radial-gradient(44% 34% at 80% 76%, rgba(201,162,39,.10), transparent 60%),
+      radial-gradient(38% 32% at 64% 24%, rgba(74,144,196,.075), transparent 62%);
+    animation:inkDrift 54s ease-in-out infinite alternate;}
+  @keyframes inkDrift{
+    0%{transform:translate3d(-1.5%,-1%,0) scale(1);}
+    100%{transform:translate3d(2%,1.6%,0) scale(1.07);}
+  }
+  .wrap{position:relative; z-index:1;}
+  /* 金色墨点（破封/阵亡迸发） */
+  .gold-mote{position:absolute; width:5px; height:5px; border-radius:50%; pointer-events:none; z-index:10;
+    background:radial-gradient(circle, #FFF8D2 0%, #E7C24A 45%, rgba(201,162,39,0) 72%);
+    animation:moteFly .95s cubic-bezier(.2,.7,.3,1) forwards;}
+  @keyframes moteFly{
+    0%{opacity:0; transform:translate(0,0) scale(.5);}
+    18%{opacity:1;}
+    100%{opacity:0; transform:translate(var(--dx), var(--dy)) scale(.15);}
+  }
+  /* 调试面板弹窗 */
+  .debugbox{background:#2B2733; color:#C9D1D9; border-radius:16px; padding:22px 26px; max-width:620px; width:92%;
+    max-height:86vh; overflow-y:auto; box-shadow:0 24px 60px rgba(0,0,0,.45);}
+  .debugbox h2{font-size:17px; letter-spacing:3px; color:#FFD77A; margin-bottom:14px; font-weight:600;}
+  .debugbox .dg-grid{display:flex; flex-wrap:wrap; gap:12px 20px;}
+  .debugbox label{display:flex; align-items:center; gap:6px; color:#AAB3C2; font-size:13px;}
+  .debugbox input{width:62px; background:#1F1C26; color:#E6EDF3; border:1px solid #444; border-radius:5px; padding:3px 6px;}
+  .debugbox .stats-line{margin-top:14px; color:#E6EDF3; line-height:1.75; font-size:13px;}
+  .debugbox .stats-line b{color:#FFD77A;}
+  .debugbox .dbgnote{margin-top:10px; color:#8B93A5; font-size:11px; line-height:1.7;}
+  .debugbox .btn{margin-top:16px; margin-right:8px;}
+  /* 操作说明弹窗 */
+  .helpbox{background:var(--card); border-radius:16px; padding:24px 30px; max-width:640px; width:92%; max-height:88vh;
+    overflow-y:auto; text-align:left; border:1px solid rgba(201,162,39,.35);
+    box-shadow:0 24px 60px rgba(20,16,28,.4), 0 0 0 6px rgba(255,253,246,.5) inset;}
+  .helpbox h2{font-size:19px; letter-spacing:5px; color:#3D2F5C; text-align:center; margin-bottom:14px;}
+  .helpbox .helptext{font-size:12.5px; line-height:1.95; color:#4A4036;}
+  .helpbox .btn{display:block; margin:16px auto 0; min-width:132px;}
+  /* 日志栏高度随新 HUD 调整 */
+  .log-zone .logbox{height:calc(100vh - 268px); min-height:360px;}
+  @media (max-height:820px){
+    .log-zone .logbox{height:340px; min-height:0;}
+    .hand{min-height:170px;}
+  }
+  /* 窄屏：HUD 收缩、战场单列 */
+  @media (max-width:760px){
+    .hud{grid-template-columns:1fr auto 1fr; gap:8px; padding:8px 10px;}
+    .hud-hp{font-size:19px;}
+    .hud-turn{font-size:11px; letter-spacing:0;}
+    .hud-seal{display:none;}
+    .hud .bar{height:11px;}
+    .field-divider{height:20px;}
+    .zone{padding:6px 7px;}
+    .zone .meters{gap:10px; row-gap:2px;}
+    .zone .meter .bar{width:56px;}
+    .field{gap:6px;}
+    .slot{padding:4px; border-radius:9px;}
+    /* 战场卡改竖排：修复 390px 下横向卡把文字挤成竖条的问题 */
+    .slot .card{flex-direction:column; gap:4px; padding:5px 6px;}
+    .slot .card .card-art{width:100%; height:auto; aspect-ratio:3/4; object-fit:cover;}
+    .slot .card .ceffect{display:none;}
+    .slot .card .cname{font-size:12px; line-height:1.25;}
+    .slot .card .cmeta{font-size:10px;}
+    .slot .card .stats{font-size:10.5px; gap:4px; flex-wrap:wrap;}
+    .slot .card .stat{padding:0 4px;}
+    .slot .slot-tag{font-size:9px;}
+    .hand .card{min-width:88px; max-width:104px;}
+    .hand{padding:10px 2px 2px; min-height:132px;}
+    .actionbar .btn{padding:8px 12px;}
+    .log-zone .logbox{height:220px; min-height:0;}
+    .helpbox, .debugbox, .modebox, .ubox{padding:18px 16px;}
+  }
+
   @media (prefers-reduced-motion: reduce){
     *, *::before, *::after{
       animation-duration:.001ms !important; animation-iteration-count:1 !important;
@@ -272,12 +408,11 @@
 
 <header>
   <h1>山海破</h1>
-  <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v1.7（打AI / 同屏双人 / 在线对战 · 本地档案）</div>
+  <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v1.8（打AI / 同屏双人 / 在线对战 · 本地档案）</div>
 </header>
 
 <div class="topbar">
-  <div class="turn-tag" id="turnTag">回合 1 · 你的回合</div>
-  <div>
+  <div class="nav">
     <button class="btn small" onclick="openMenu()">模式</button>
     <button class="btn small" onclick="toggleHelp()">操作说明</button>
     <button class="btn small" onclick="openUserPanel()">档案</button>
@@ -286,46 +421,56 @@
   </div>
 </div>
 
+<!-- HUD：回合 + 双方本源对峙（信息架构上移，战场得以占满一屏） -->
+<div class="hud">
+  <div class="hud-side hud-enemy">
+    <div class="hud-name" id="aiHudName">敌方（AI）</div>
+    <div class="meter hud-meter">
+      <div class="bar hud-bar"><div class="fill" id="aiHpBar" style="background:var(--bad);"></div></div>
+      <b class="hud-hp" id="aiHp">30</b><span class="hud-max">/30</span>
+    </div>
+  </div>
+  <div class="hud-mid">
+    <div class="hud-turn" id="turnTag">回合 1 · 你的回合</div>
+    <div class="hud-seal">山海破</div>
+  </div>
+  <div class="hud-side hud-self">
+    <div class="hud-name" id="myHudName">你</div>
+    <div class="meter hud-meter">
+      <div class="bar hud-bar"><div class="fill" id="myHpBar" style="background:var(--good);"></div></div>
+      <b class="hud-hp" id="myHp">30</b><span class="hud-max">/30</span>
+    </div>
+  </div>
+</div>
+
 <div class="layout">
 <div class="main-col">
 
-<details class="help" id="helpBox" open>
-  <summary>操作说明（一屏速览）</summary>
-  ① 点击<b>手牌</b>选中（费用不足变灰）；点「部署」放到我方灵位，点「使用」对目标施放神器。<br>
-  ② 点击<b>我方灵位神兽</b>选中，操作栏出现：<b>攻击</b>（再点敌方目标）· <b>破封</b>（消耗破势翻面，+2/+2 与破势技）· <b>破势技</b>（消耗破势发动）。<br>
-  ③ <b>狂性</b>：破封神兽本回合未攻击且未用破势技（被冻结豁免），回合结束你的本源 −1。<b>镇封</b>：对方破封随从被神器/效果翻回封印态后，本局不可再破封。<br>
-  ④ <b>五行</b>：金克木克土克水克火克金，克制 +1、被克 −1（最低 1）。<b>破势</b>：每造成 3 点伤害 +1（上限 10）。<br>
-  ⑤ 祥瑞羁绊（场上祥瑞≥2）：回合开始本源+1；凶煞羁绊（场上凶煞≥2）：我方神兽攻击+1。<br>
-  ⑥ 击破对方 30 点本源获胜；30 回合未分胜负按本源判定。<br>
-  ⑦ 防御：神兽攻击对方本源时，被攻击方场上有存活神兽可点其挺身防御（代为承受伤害，五行克制照常结算）；也可放弃防御。<br>  ⑧ 模式：顶部「模式」按钮切换 —— 打AI / 同屏双人（1P下方 2P上方 轮流操作）/ 在线对战（连接码 P2P 直连）。<br>
-  ⑨ 档案：顶部「档案」查看昵称与战绩（自动记录每局结果，仅存本设备浏览器，可随时重置）。
-</details>
-
 <!-- 敌方 -->
-<div class="zone">
-  <div class="zone-title"><span id="aiZoneTitle">敌方（AI）</span><span id="aiDeckInfo" style="font-weight:400;"></span></div>
+<div class="zone zone-enemy">
+  <div class="zone-title"><span>对方战场</span><span id="aiDeckInfo" style="font-weight:400;"></span></div>
   <div class="meters">
-    <div class="meter"><span class="label">山海本源</span><div class="bar"><div class="fill" id="aiHpBar" style="background:var(--bad);"></div></div><b id="aiHp">30</b><span style="color:var(--sub);font-size:11px;">/30</span></div>
-    <div class="meter"><span class="label">灵气</span><b id="aiMana">1</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
-    <div class="meter"><span class="label">破势</span><div class="bar"><div class="fill" id="aiPoshiBar" style="background:var(--accent);"></div></div><b id="aiPoshi">0</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
+    <div class="meter"><span class="label">灵气</span><b id="aiMana">1</b><span class="mx">/10</span></div>
+    <div class="meter"><span class="label">破势</span><div class="bar"><div class="fill" id="aiPoshiBar" style="background:var(--accent);"></div></div><b id="aiPoshi">0</b><span class="mx">/10</span></div>
     <div class="meter"><span class="label">手牌</span><b id="aiHand">3</b></div>
   </div>
   <div class="field" id="aiField"></div>
 </div>
 
+<div class="field-divider"><span class="divider-seal">破</span></div>
+
 <!-- 我方 -->
-<div class="zone">
-  <div class="zone-title"><span id="myZoneTitle">你的战场</span><span id="myDeckInfo" style="font-weight:400;"></span></div>
+<div class="zone zone-self">
+  <div class="zone-title"><span>己方战场</span><span id="myDeckInfo" style="font-weight:400;"></span></div>
   <div class="meters">
-    <div class="meter"><span class="label">山海本源</span><div class="bar"><div class="fill" id="myHpBar" style="background:var(--good);"></div></div><b id="myHp">30</b><span style="color:var(--sub);font-size:11px;">/30</span></div>
-    <div class="meter"><span class="label">灵气</span><b id="myMana">1</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
-    <div class="meter"><span class="label">破势</span><div class="bar"><div class="fill" id="myPoshiBar" style="background:var(--accent);"></div></div><b id="myPoshi">0</b><span style="color:var(--sub);font-size:11px;">/10</span></div>
+    <div class="meter"><span class="label">灵气</span><b id="myMana">1</b><span class="mx">/10</span></div>
+    <div class="meter"><span class="label">破势</span><div class="bar"><div class="fill" id="myPoshiBar" style="background:var(--accent);"></div></div><b id="myPoshi">0</b><span class="mx">/10</span></div>
     <div class="meter"><span class="label">手牌</span><b id="myHand">3</b></div>
   </div>
   <div class="field" id="myField"></div>
 </div>
 
-<div class="zone">
+<div class="zone zone-hand">
   <div class="zone-title"><span id="handTitle">手牌</span> <span id="handHint" class="hint"></span></div>
   <div class="hand" id="myHandArea"></div>
   <div class="actionbar" id="actionBar">
@@ -344,22 +489,45 @@
 </div><!-- /side-col -->
 </div><!-- /layout -->
 
-<details class="debug" id="debugBox">
-  <summary>调试面板 · 参数与验证数据</summary>
-  <div class="dg-grid">
-    <label>破势阈值 <input id="cfgPoshiPer" type="number" min="1" max="6" step="1"></label>
-    <label>克制加成 <input id="cfgCB" type="number" min="0" max="3" step="1"></label>
-    <label>被克惩罚 <input id="cfgCP" type="number" min="0" max="3" step="1"></label>
-    <label>破势上限 <input id="cfgPC" type="number" min="4" max="15" step="1"></label>
-    <label>狂性伤害 <input id="cfgRage" type="number" min="0" max="3" step="1"></label>
-    <label>中费破封 <input id="cfgBM" type="number" min="2" max="8" step="1"></label>
-    <button class="btn small" onclick="applyCfg()">应用参数</button>
-    <button class="btn small" onclick="resetCfg()">恢复默认</button>
+<!-- 调试面板（弹窗化，不再占用战场纵向空间） -->
+<div class="modemenu" id="debugPanel" style="display:none;">
+  <div class="debugbox">
+    <h2>调试面板 · 参数与验证数据</h2>
+    <div class="dg-grid">
+      <label>破势阈值 <input id="cfgPoshiPer" type="number" min="1" max="6" step="1"></label>
+      <label>克制加成 <input id="cfgCB" type="number" min="0" max="3" step="1"></label>
+      <label>被克惩罚 <input id="cfgCP" type="number" min="0" max="3" step="1"></label>
+      <label>破势上限 <input id="cfgPC" type="number" min="4" max="15" step="1"></label>
+      <label>狂性伤害 <input id="cfgRage" type="number" min="0" max="3" step="1"></label>
+      <label>中费破封 <input id="cfgBM" type="number" min="2" max="8" step="1"></label>
+      <button class="btn small" onclick="applyCfg()">应用参数</button>
+      <button class="btn small" onclick="resetCfg()">恢复默认</button>
+    </div>
+    <div class="stats-line" id="debugStats"></div>
+    <div class="dbgnote">规则集与设计契约一致：破势按每次伤害事件 floor(X/3) 结算；克制 ±1 最低 1；破封消耗按费用 3/5/7；每卡整局最多破封一次，镇封后永久失效。</div>
+    <button class="btn primary" onclick="toggleDebug()">关闭</button>
   </div>
-  <div class="stats-line" id="debugStats"></div>
-  <div style="margin-top:6px;color:#8B93A5;font-size:11px;">规则集与设计契约一致：破势按每次伤害事件 floor(X/3) 结算；克制 ±1 最低 1；破封消耗按费用 3/5/7；每卡整局最多破封一次，镇封后永久失效。</div>
-</details>
+</div>
 
+</div>
+
+<!-- 操作说明（弹窗化，释放战场纵向空间） -->
+<div class="modemenu" id="helpPanel" style="display:none;">
+  <div class="helpbox">
+    <h2>操作说明</h2>
+    <div class="helptext">
+      ① 点击<b>手牌</b>选中（费用不足变灰）；点「部署」放到我方灵位，点「使用」对目标施放神器。<br>
+      ② 点击<b>我方灵位神兽</b>选中，操作栏出现：<b>攻击</b>（再点敌方目标）· <b>破封</b>（消耗破势翻面，+2/+2 与破势技）· <b>破势技</b>（消耗破势发动）。<br>
+      ③ <b>狂性</b>：破封神兽本回合未攻击且未用破势技（被冻结豁免），回合结束你的本源 −1。<b>镇封</b>：对方破封随从被神器/效果翻回封印态后，本局不可再破封。<br>
+      ④ <b>五行</b>：金克木克土克水克火克金，克制 +1、被克 −1（最低 1）。<b>破势</b>：每造成 3 点伤害 +1（上限 10）。<br>
+      ⑤ 祥瑞羁绊（场上祥瑞≥2）：回合开始本源+1；凶煞羁绊（场上凶煞≥2）：我方神兽攻击+1。<br>
+      ⑥ 击破对方 30 点本源获胜；30 回合未分胜负按本源判定。<br>
+      ⑦ 防御：神兽攻击对方本源时，被攻击方场上有存活神兽可点其挺身防御（代为承受伤害，五行克制照常结算）；也可放弃防御。<br>
+      ⑧ 模式：顶部「模式」按钮切换 —— 打AI / 同屏双人（1P下方 2P上方 轮流操作）/ 在线对战（连接码 P2P 直连）。<br>
+      ⑨ 档案：顶部「档案」查看昵称与战绩（自动记录每局结果，仅存本设备浏览器，可随时重置）。
+    </div>
+    <button class="btn primary" onclick="toggleHelp()">知道了</button>
+  </div>
 </div>
 
 <div class="modemenu" id="modeMenu">
