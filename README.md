@@ -2,6 +2,10 @@
 
 取材《山海经》的国潮水墨风卡牌对战游戏。**单文件 HTML、零依赖、双击即玩**，支持打 AI / 同屏双人 / WebRTC 点对点在线对战，内置**本地用户档案**（游客昵称 + 战绩自动记录，仅存本设备浏览器）。
 
+**线上地址（GitHub Pages 双版本并行）**：
+- 当前开发版（SHANHAIPO-006 · v1.6）：<https://zhumin2.github.io/shanhaipo/v2/>
+- 原型存档（SHANHAIPO-003 · v1.2）：<https://zhumin2.github.io/shanhaipo/>
+
 - 公网试玩：<https://zhumin2.github.io/shanhaipo/>
 - 产品设计：[山海破-产品设计文档.md](山海破-产品设计文档.md)
 - 技术设计（现状还原 as-built）：[山海破-技术设计文档.md](山海破-技术设计文档.md)（P0 代码审计 + M1/M2a 工程记录）
