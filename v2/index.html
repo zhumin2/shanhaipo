@@ -552,6 +552,46 @@
     header .sub{white-space:normal;}
     .zone-title .zres{gap:8px;}
   }
+  /* ===== v2.1：卡牌预览 / 瞄准曲线 / 结算面板 ===== */
+  .card-preview{position:fixed; z-index:76; width:198px; pointer-events:none; opacity:0;
+    background:linear-gradient(180deg,#FFFEF9,#FBF6E9); border:1px solid rgba(201,162,39,.55);
+    border-radius:12px; overflow:hidden; transform:translateY(8px) scale(.97);
+    box-shadow:0 20px 46px rgba(20,16,28,.42), 0 0 0 1px rgba(255,255,255,.6) inset;
+    transition:opacity .14s ease, transform .14s ease;}
+  .card-preview.on{opacity:1; transform:none;}
+  .card-preview img{width:100%; aspect-ratio:3/4; object-fit:cover; display:block;}
+  .card-preview .cp-body{padding:8px 10px 10px;}
+  .card-preview .cp-name{font-size:13.5px; font-weight:800; color:#3D2F5C; letter-spacing:.5px;}
+  .card-preview .cp-meta{font-size:10.5px; color:var(--sub); margin-top:2px;}
+  .card-preview .cp-text{font-size:11px; line-height:1.65; color:#4A4036; margin-top:6px;}
+  .card-preview .cp-skill{margin-top:7px; padding-top:7px; border-top:1px dashed var(--line);
+    font-size:11px; line-height:1.6; color:#6B4FA8;}
+  .card-preview .cp-src{margin-top:6px; font-size:10px; color:var(--sub); font-style:italic;}
+  /* 瞄准曲线 */
+  .aim-layer{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:66;}
+  .aim-path{fill:none; stroke:rgba(201,162,39,.85); stroke-width:2.5; stroke-linecap:round;
+    stroke-dasharray:9 7; filter:drop-shadow(0 0 6px rgba(201,162,39,.6));
+    animation:aimFlow .6s linear infinite;}
+  .aim-path.locked{stroke:rgba(192,57,43,.92); stroke-width:4; stroke-dasharray:none;
+    filter:drop-shadow(0 0 11px rgba(192,57,43,.85));}
+  @keyframes aimFlow{to{stroke-dashoffset:-32;}}
+  .aim-head{fill:rgba(201,162,39,.95); filter:drop-shadow(0 0 8px rgba(201,162,39,.8));}
+  /* 结算面板 */
+  .endbox .endgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:4px 0 12px;}
+  .endbox .endhp{background:rgba(255,253,246,.85); border:1px solid var(--line); border-radius:10px; padding:7px 10px;
+    display:flex; align-items:center; justify-content:space-between; font-size:11.5px; color:var(--sub);}
+  .endbox .endhp b{font-size:19px; font-variant-numeric:tabular-nums; color:var(--ink);}
+  .endbox .endhp.win b{color:var(--good);}
+  .endbox .endhp.lose b{color:var(--bad);}
+  .endbox .endbars{text-align:left; display:flex; flex-direction:column; gap:6px; margin-bottom:10px;}
+  .endbox .endrow{display:flex; align-items:center; gap:8px; font-size:11px; color:var(--sub);}
+  .endbox .endrow .lbl{flex:0 0 62px;}
+  .endbox .endrow .track{display:block; flex:1 1 auto; height:8px; border-radius:5px; background:rgba(168,160,140,.26); overflow:hidden;}
+  .endbox .endrow .fill{display:block; height:100%; border-radius:5px;
+    background:linear-gradient(90deg,#C9A227,#8FB6E8);
+    transition:width .5s cubic-bezier(.2,.8,.25,1);}
+  .endbox .endrow .val{flex:0 0 46px; text-align:right; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:700;}
+  .endbox .endline{font-size:11px; color:var(--sub); line-height:1.7; border-top:1px dashed var(--line); padding-top:8px;}
   @media (prefers-reduced-motion: reduce){
     *, *::before, *::after{
       animation-duration:.001ms !important; animation-iteration-count:1 !important;
@@ -566,7 +606,7 @@
 <header>
   <div class="brand">
     <h1>山海破</h1>
-    <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v2.0 · 本地档案</div>
+    <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v2.1 · 本地档案</div>
   </div>
   <div class="nav">
     <button class="btn small" onclick="openMenu()">模式</button>
@@ -1501,22 +1541,45 @@ function finalByTurns(){
   G.winner = G.player.hp>G.ai.hp?"player":(G.ai.hp>G.player.hp?"ai":"draw");
   showEnd();
 }
+// v2.1：结算面板的战绩条（值 → 条形宽度，中文标签 + 数值）
+function endBar(label, val, max, txt){
+  const pct = max > 0 ? Math.max(3, Math.min(100, Math.round(val / max * 100))) : 0;
+  return `<div class="endrow"><span class="lbl">${label}</span>`
+    + `<span class="track"><span class="fill" style="width:${pct}%"></span></span>`
+    + `<span class="val">${txt}</span></div>`;
+}
 function showEnd(){
   EVflush(); // 终局前清空事件队列，保证最后一批日志/动画可见
   const w = G.winner;
-  document.getElementById("endTitle").textContent = w==="player"?"胜！":(w==="ai"?"败":"平局");
-  document.getElementById("endTitle").style.color = w==="player"?"var(--good)":"var(--bad)";
-  document.getElementById("endStats").innerHTML =
-    `本局回合：${G.turn} ｜ 你的本源 ${G.player.hp} vs 敌方 ${G.ai.hp}<br>`+
-    `破封次数：${G.stats.breaks} ｜ 狂性触发：${G.stats.raged} ｜ 镇封：${G.stats.sealed}<br>`+
-    `攻击次数：${G.stats.attacks} ｜ 克制攻击：${G.stats.counterAttacks}（${G.stats.attacks?Math.round(G.stats.counterAttacks/G.stats.attacks*100):0}%）<br>`+
-    `破势技发动：${G.stats.skills} ｜ 重开次数：${G.stats.mulligan}`;
+  const st = G.stats;
+  const meIsP1 = (G.mode === "pvp") ? (G.role === "p1") : true;
+  const myHp = meIsP1 ? G.player.hp : G.ai.hp;
+  const opHp = meIsP1 ? G.ai.hp : G.player.hp;
+  const titleMap = { player:"胜", ai:"败", draw:"平" };
+  const t = document.getElementById("endTitle");
+  t.textContent = (G.mode==="hotseat") ? (w==="draw"?"平局":"胜利方 "+(w==="player"?"1P":"2P")) : titleMap[w];
+  t.style.color = (G.mode==="hotseat") ? "#3D2F5C" : (w==="player"?"var(--good)":(w==="ai"?"var(--bad)":"var(--sub)"));
+  const counterPct = st.attacks ? Math.round(st.counterAttacks / st.attacks * 100) : 0;
+  let html = "";
+  html += `<div class="endgrid">
+      <div class="endhp ${myHp>opHp?"win":(myHp<opHp?"lose":"")}"><span>你的本源</span><b>${myHp}</b></div>
+      <div class="endhp ${opHp>myHp?"win":(opHp<myHp?"lose":"")}"><span>对方本源</span><b>${opHp}</b></div>
+    </div>`;
+  html += `<div class="endbars">`
+    + endBar("回合数", G.turn, CFG.maxTurns, `${G.turn} / ${CFG.maxTurns}`)
+    + endBar("克制率", counterPct, 100, `${counterPct}%`)
+    + endBar("攻击", st.attacks, 40, `${st.attacks} 次`)
+    + endBar("破封", st.breaks, 4, `${st.breaks} 次`)
+    + endBar("破势技", st.skills, 5, `${st.skills} 次`)
+    + endBar("狂性", st.raged, 5, `${st.raged} 次`)
+    + `</div>`;
+  if(st.sealed > 0) html += `<div class="endline">镇封 ${st.sealed} 次 ｜ 重开 ${st.mulligan} 次</div>`;
   const __rec = (typeof UserSys!=="undefined") ? UserSys.recordGame(G) : null;
   if(__rec){
     const sm = UserSys.summary();
-    document.getElementById("endStats").innerHTML +=
-      `<br>档案已记录（${UserSys.profile.nickname}）：打AI ${sm.ai.w}胜${sm.ai.l}负${sm.ai.d}平 ｜ 在线 ${sm.pvp.w}胜${sm.pvp.l}负${sm.pvp.d}平 ｜ 同屏 ${sm.hotseat} 局`;
+    html += `<div class="endline">档案已记录（${UserSys.profile.nickname}）：打AI ${sm.ai.w}胜${sm.ai.l}负${sm.ai.d}平 ｜ 在线 ${sm.pvp.w}胜${sm.pvp.l}负${sm.pvp.d}平 ｜ 同屏 ${sm.hotseat} 局</div>`;
   }
+  document.getElementById("endStats").innerHTML = html;
   document.getElementById("endBanner").style.display="flex";
 }
 function hideEnd(){ document.getElementById("endBanner").style.display="none"; }
@@ -1765,6 +1828,12 @@ function renderField(sideEl, side, isPlayer){
       slot.innerHTML = cardFaceHtml(s, atkMod, !!side.sealedFlags[s.id])
         + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
       slot.addEventListener("click", ()=> onSlotClick(side, idx));
+      const faceEl = slot.querySelector(".card");
+      if(faceEl){
+        const def = CARDS.find(c=>c.id===s.id);
+        faceEl.addEventListener("mouseenter", ()=> showCardPreview(def, slot, s));   // 战场卡预览（带当前数值）
+        faceEl.addEventListener("mouseleave", hideCardPreview);
+      }
     }
     holder.appendChild(slot);
   });
@@ -1786,6 +1855,8 @@ function renderHand(){
     div.className += (playable?" playable":" notplay") + (ui.selCard===cid?" selected":"");
     div.style.cursor = playable?"pointer":"not-allowed";
     div.addEventListener("click", ()=>{ if(!canActNow()||G.ended) return; onHandClick(hi, playable); });
+    div.addEventListener("mouseenter", ()=> showCardPreview(card, div));      // v2.1 大图预览
+    div.addEventListener("mouseleave", hideCardPreview);
     // 拖拽部署（v1.9）：手牌可拖到己方空灵位
     if(playable && mine && card.kind==="creature"){
       div.setAttribute("draggable","true");
@@ -1865,6 +1936,7 @@ function renderMeters(){
 }
 function renderAll(){
   if(G.mode==="pvp" && (!G.player || !G.ai)) return;
+  if(typeof hideCardPreview==="function") hideCardPreview();
   const me = mySide(), opp = oppSide();
   renderMeters();
   renderField("myField", me, true);
@@ -1879,6 +1951,7 @@ function renderActionBar(){
   const hint = document.getElementById("actionHint");
   bar.innerHTML = "";
   markHudTarget(false);   // 每帧重置本源条高亮，仅在需要的模式下重新点亮
+  if(ui.mode!=="attack" && typeof aimClear==="function") aimClear();
   const me = mySide(), opp = oppSide();
   const mine = canActNow();
   const endBtn = document.createElement("button");
@@ -2180,6 +2253,105 @@ function renderUserPanel(){
     </div>`;
 }
 
+/* ============ 卡牌预览 + 瞄准指示（v2.1，纯表现层） ============
+ * 一、悬停/聚焦任意卡牌时在旁侧显示大图详情（完整规则文本、破势技、出处）。
+ * 二、进入攻击模式后，从攻击者到鼠标画一条暗金曲线；悬停合法目标时吸附并加粗。
+ * 两者均为 pointer-events:none，不拦截任何点击。 */
+
+let previewEl = null;
+function ensurePreview(){
+  if(!previewEl){
+    previewEl = document.createElement("div");
+    previewEl.className = "card-preview";
+    document.body.appendChild(previewEl);
+  }
+  return previewEl;
+}
+function showCardPreview(card, anchorEl, unit){
+  if(!card || !anchorEl) return;
+  const el = ensurePreview();
+  const atk = unit ? unit.atk : card.atk;
+  const hp  = unit ? unit.hp  : card.hp;
+  const broken = !!(unit ? unit.broken : card.broken);
+  const parts = [];
+  if(ART[card.id]) parts.push(`<img src="${ART[card.id]}" alt="">`);
+  parts.push(`<div class="cp-body">`);
+  parts.push(`<div class="cp-name">${card.name}${broken?"·破封":""}</div>`);
+  parts.push(`<div class="cp-meta">${card.cost} 费 · ${card.element}系 · ${card.aura||"神器"}`
+    + (card.kind==="creature" ? ` · 攻 ${atk} / 命 ${hp}` : ``) + `</div>`);
+  parts.push(`<div class="cp-text">${card.effect && card.effect.desc ? card.effect.desc : "无特殊效果"}</div>`);
+  if(card.skill) parts.push(`<div class="cp-skill">破势技「${card.skill.name}」${card.skill.cost} 破势：${card.skill.desc}</div>`);
+  if(card.source) parts.push(`<div class="cp-src">${card.source}</div>`);
+  parts.push(`</div>`);
+  el.innerHTML = parts.join("");
+  el.classList.add("on");
+
+  // 定位：优先显示在卡牌上方，越界则翻到下方，并夹在视口内
+  const r = anchorEl.getBoundingClientRect();
+  const pr = el.getBoundingClientRect();
+  let top = r.top - pr.height - 12;
+  if(top < 8) top = Math.min(window.innerHeight - pr.height - 8, r.bottom + 12);
+  let left = r.left + r.width/2 - pr.width/2;
+  left = Math.max(8, Math.min(left, window.innerWidth - pr.width - 8));
+  el.style.left = Math.round(left) + "px";
+  el.style.top  = Math.round(top) + "px";
+}
+function hideCardPreview(){
+  if(previewEl) previewEl.classList.remove("on");
+}
+
+/* ---------- 瞄准曲线 ---------- */
+let aimSvg = null, aimPath = null, aimHead = null;
+const SVGNS = "http://www.w3.org/2000/svg";
+function ensureAim(){
+  if(aimSvg) return;
+  aimSvg = document.createElementNS(SVGNS, "svg");
+  aimSvg.setAttribute("class", "aim-layer");
+  aimPath = document.createElementNS(SVGNS, "path");
+  aimPath.setAttribute("class", "aim-path");
+  aimSvg.appendChild(aimPath);
+  aimHead = document.createElementNS(SVGNS, "circle");
+  aimHead.setAttribute("class", "aim-head");
+  aimHead.setAttribute("r", "5");
+  aimSvg.appendChild(aimHead);
+  document.body.appendChild(aimSvg);
+}
+function aimClear(){
+  if(aimPath) aimPath.setAttribute("d", "");
+  if(aimHead){ aimHead.setAttribute("cx", "-20"); aimHead.setAttribute("cy", "-20"); }
+}
+function aimFromEl(){
+  if(ui.mode!=="attack" || ui.selField===null) return null;
+  const slot = document.querySelector(`#myField .slot[data-slot-idx="${ui.selField}"]`);
+  return slot ? slot.querySelector(".card") : null;
+}
+function aimDraw(toX, toY, snapped){
+  const from = aimFromEl();
+  if(!from){ aimClear(); return; }
+  ensureAim();
+  const r = from.getBoundingClientRect();
+  const x1 = r.left + r.width/2, y1 = r.top + r.height/2;
+  const cx = (x1 + toX)/2, cy = Math.min(y1, toY) - Math.max(46, Math.abs(toX-x1)*0.16);
+  if(aimPath){
+    aimPath.setAttribute("d", `M ${x1} ${y1} Q ${cx} ${cy} ${toX} ${toY}`);
+    aimPath.classList.toggle("locked", !!snapped);
+  }
+  if(aimHead){ aimHead.setAttribute("cx", toX); aimHead.setAttribute("cy", toY); }
+}
+// 全局监听：仅在攻击模式下生效
+document.addEventListener("mousemove", (e)=>{
+  if(!G || !G.player || G.ended){ aimClear(); return; }
+  if(ui.mode!=="attack"){ aimClear(); return; }
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const slot = el && el.closest ? el.closest("#aiField .slot") : null;
+  const targetCard = slot ? slot.querySelector(".card") : null;
+  if(targetCard){
+    const tr = targetCard.getBoundingClientRect();
+    aimDraw(tr.left + tr.width/2, tr.top + tr.height/2, true);
+  } else {
+    aimDraw(e.clientX, e.clientY, false);
+  }
+});
 /* ============ 在线对战（P2P WebRTC + 手动信令） ============ */
 let pc = null;
 function openMenu(){ document.getElementById("modeMenu").style.display="flex"; }
