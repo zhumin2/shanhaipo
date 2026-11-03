@@ -54,18 +54,16 @@
       if(canActNow()){
         var me = mySide();
         var hi = me.hand.findIndex(function(id){ var c=CARDS.find(function(x){return x.id===id;}); return c && c.kind==="creature" && c.cost<=me.mana; });
-        if(hi>=0){ onHandClick(hi, true);
-          var db=[...document.querySelectorAll('#actionBar button')].find(function(b){return b.textContent.indexOf('部署到灵位')>=0;});
-          if(db) db.click();
+        if(hi>=0){
+          onHandClick(hi, true);                                   // 选中手牌
+          var slot = me.field.map(function(x,i){ return x?null:i; }).filter(function(i){ return i!==null; })[0];
+          if(slot!==undefined){ onSlotClick(me, slot); }           // v1.9：直接点空灵位部署（按钮已移除）
         }
         setTimeout(function(){
           var idx = (!G.waitingPeer) ? me.field.findIndex(function(s){return s && !s.attacked;}) : -1; // 等待防御应答期间不再发起新攻击（TDD-17）
-          if(idx>=0){ onMySlotClick(idx);
+          if(idx>=0){ onSlotClick(me, idx);                        // 选中己方神兽
             var ab=[...document.querySelectorAll('#actionBar button')].find(function(b){return b.textContent.trim()==='攻击';});
-            if(ab){ ab.click();
-              var hb=[...document.querySelectorAll('#actionBar button')].find(function(b){return b.textContent.indexOf('攻击敌方本源')>=0;});
-              if(hb) hb.click();
-            }
+            if(ab){ ab.click(); doAttackHp(); }                    // v1.9：进入攻击模式后直接指向本源（按钮已移除）
           }
           setTimeout(function(){ if(canActNow() && !G.waitingPeer) endTurn(); // 防御未结算不得结束回合（TDD-17）
             var _op = me===G.player?G.ai:G.player;

@@ -307,6 +307,26 @@
     border-radius:5px; font-size:13px; font-weight:700; color:#8A6B1F;
     background:linear-gradient(160deg,#FFFDF4,#F2E8CF);
     border:1px solid rgba(201,162,39,.75); box-shadow:0 2px 7px rgba(61,47,92,.14);}
+  /* 无按钮式交互（v1.9）：空灵位投放区 / 合法目标高亮 / 本源条可点击 */
+  .slot.dropzone{border-style:dashed; border-color:rgba(201,162,39,.85);
+    background:rgba(201,162,39,.09); cursor:pointer;
+    box-shadow:0 0 0 1px rgba(201,162,39,.28), 0 0 16px rgba(201,162,39,.18) inset;
+    animation:dropPulse 2.2s ease-in-out infinite;}
+  .slot.dropzone:hover, .slot.dropzone.dragover{background:rgba(201,162,39,.20);
+    box-shadow:0 0 0 2px rgba(201,162,39,.65), 0 0 22px rgba(201,162,39,.28) inset;}
+  .slot.dropzone .slot-tag{color:#8A6B1F; font-weight:700;}
+  @keyframes dropPulse{0%,100%{border-color:rgba(201,162,39,.85);} 50%{border-color:rgba(201,162,39,.45);}}
+  .slot.targetable{cursor:crosshair; outline:2px dashed rgba(192,57,43,.55); outline-offset:-3px;}
+  .slot.targetable:hover{outline-color:rgba(192,57,43,.9);}
+  .hud-enemy.targetable{cursor:pointer;}
+  .hud-enemy.targetable .hud-bar{box-shadow:0 0 0 2px rgba(192,57,43,.6), 0 0 20px rgba(192,57,43,.35);
+    animation:targetPulse 1.4s ease-in-out infinite;}
+  @keyframes targetPulse{0%,100%{filter:brightness(1);} 50%{filter:brightness(1.4);}}
+  .hud-enemy.targetable::after{content:"↑ 点击此处指向本源"; position:absolute; right:0; top:-14px;
+    font-size:10px; font-weight:700; letter-spacing:.5px; color:#C0392B; white-space:nowrap;
+    background:rgba(255,253,246,.96); border:1px solid rgba(192,57,43,.38); border-radius:8px; padding:1px 7px;
+    box-shadow:0 2px 8px rgba(0,0,0,.12);}
+  .hud-side{position:relative;}
   /* 手牌交互：悬浮抬升 / 选中金边（覆盖原有紫色描边） */
   .hand{padding:10px 2px 2px; min-height:150px; gap:9px;}
   .hand .card{transition:transform .18s cubic-bezier(.2,.8,.25,1), box-shadow .2s ease, border-color .2s ease, filter .2s ease;}
@@ -423,7 +443,7 @@
 
 <!-- HUD：回合 + 双方本源对峙（信息架构上移，战场得以占满一屏） -->
 <div class="hud">
-  <div class="hud-side hud-enemy">
+  <div class="hud-side hud-enemy" onclick="onHudEnemyClick()">
     <div class="hud-name" id="aiHudName">敌方（AI）</div>
     <div class="meter hud-meter">
       <div class="bar hud-bar"><div class="fill" id="aiHpBar" style="background:var(--bad);"></div></div>
@@ -516,8 +536,8 @@
   <div class="helpbox">
     <h2>操作说明</h2>
     <div class="helptext">
-      ① 点击<b>手牌</b>选中（费用不足变灰）；点「部署」放到我方灵位，点「使用」对目标施放神器。<br>
-      ② 点击<b>我方灵位神兽</b>选中，操作栏出现：<b>攻击</b>（再点敌方目标）· <b>破封</b>（消耗破势翻面，+2/+2 与破势技）· <b>破势技</b>（消耗破势发动）。<br>
+      ① 点击<b>手牌</b>选中（费用不足变灰）→ 己方空灵位发光，<b>点一下就部署</b>（也可把手牌直接拖到灵位）；<b>神器</b>选中后点目标或点上方敌方本源条即施放。再点一次同一张牌或按 Esc 取消。<br>
+      ② 点击<b>我方灵位神兽</b>选中，操作栏出现：<b>攻击</b>（再点敌方神兽，或点上方敌方本源条直攻本源）· <b>破封</b>（消耗破势翻面，+2/+2 与破势技）· <b>破势技</b>（消耗破势发动）。<br>
       ③ <b>狂性</b>：破封神兽本回合未攻击且未用破势技（被冻结豁免），回合结束你的本源 −1。<b>镇封</b>：对方破封随从被神器/效果翻回封印态后，本局不可再破封。<br>
       ④ <b>五行</b>：金克木克土克水克火克金，克制 +1、被克 −1（最低 1）。<b>破势</b>：每造成 3 点伤害 +1（上限 10）。<br>
       ⑤ 祥瑞羁绊（场上祥瑞≥2）：回合开始本源+1；凶煞羁绊（场上凶煞≥2）：我方神兽攻击+1。<br>

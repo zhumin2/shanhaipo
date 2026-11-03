@@ -35,9 +35,29 @@ function renderField(sideEl, side, isPlayer){
       if(s.broken) cls += " brk";
     }
     slot.className = cls;
+    slot.dataset.slotIdx = idx;   // 空/占用灵位都带下标：动画定位（阵亡飘字）与点击测试均依赖
+    // 可投放提示（v1.9）：选中神兽手牌时，己方空灵位发光并可点/拖放
+    let isDrop = false;
+    if(!s && isPlayer && ui.selCard){
+      const sc = CARDS.find(c=>c.id===ui.selCard);
+      if(sc && sc.kind==="creature" && canActNow()){
+        isDrop = true;
+        slot.className = cls + " dropzone";
+        slot.addEventListener("dragover", (e)=>{ e.preventDefault(); slot.classList.add("dragover"); });
+        slot.addEventListener("dragleave", ()=> slot.classList.remove("dragover"));
+        slot.addEventListener("drop", (e)=>{ e.preventDefault(); slot.classList.remove("dragover"); deployToSlot(idx); });
+      }
+    }
+    // 合法目标提示：攻击/破势技/敌我神器选目标时高亮
+    if(s && ((ui.mode==="attack"||ui.mode==="skill"||ui.mode==="artifact") && !isPlayer
+             || (ui.mode==="artifactOwn" && isPlayer))){
+      slot.className += " targetable";
+    }
     if(!s){
-      slot.innerHTML = `<div class="slot-tag">灵位 ${idx+1}</div>`;
-      if(!isPlayer){ slot.addEventListener("click", ()=> onSlotClick(side, idx)); }
+      slot.innerHTML = `<div class="slot-tag">${isDrop ? "点击部署至此" : "灵位 "+(idx+1)}</div>`;
+      if(!isPlayer || (ui.selCard && (CARDS.find(c=>c.id===ui.selCard)||{}).kind==="creature")){
+        slot.addEventListener("click", ()=> onSlotClick(side, idx));
+      }
     } else {
       const auraMod = isPlayer ? (auraXiong(side)?1:0) : (auraXiong(side)?1:0);
       const atkMod = auraMod + (s.skillBonus||0) + (s.turnAtkBuff||0);
@@ -49,7 +69,6 @@ function renderField(sideEl, side, isPlayer){
       if(s.tauntTurn) flags.push("守护");
       if(!s.sick && !s.attacked && !s.defended && !s.frozen) flags.push("待命");
       slot.innerHTML = cardHtml(s, {atkMod, sealed:!!side.sealedFlags[s.id]}) + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
-      slot.dataset.slotIdx = idx;
       slot.addEventListener("click", ()=> onSlotClick(side, idx));
     }
     holder.appendChild(slot);
@@ -72,6 +91,16 @@ function renderHand(){
     div.className += (playable?" playable":" notplay") + (ui.selCard===cid?" selected":"");
     div.style.cursor = playable?"pointer":"not-allowed";
     div.addEventListener("click", ()=>{ if(!canActNow()||G.ended) return; onHandClick(hi, playable); });
+    // 拖拽部署（v1.9）：手牌可拖到己方空灵位
+    if(playable && mine && card.kind==="creature"){
+      div.setAttribute("draggable","true");
+      div.addEventListener("dragstart", (e)=>{
+        ui.selCard = cid; ui.selField = null; ui.mode = "idle";
+        try{ e.dataTransfer.setData("text/plain", cid); e.dataTransfer.effectAllowed = "move"; }catch(_e){}
+        renderActionBar(); renderField("myField", mySide(), true);
+      });
+      div.addEventListener("dragend", ()=>{ /* 落点失败时保持选中，用户可改点击部署 */ });
+    }
     area.appendChild(div);
   });
   hint.textContent = mine ? `灵气 ${me.mana}/${me.manaCap} · 手牌 ${me.hand.length}` : (G.mode==="hotseat" ? `等待 ${sideLabel(me)} 操作…` : "等待对方…");
@@ -127,6 +156,7 @@ function renderActionBar(){
   const bar = document.getElementById("actionBar");
   const hint = document.getElementById("actionHint");
   bar.innerHTML = "";
+  markHudTarget(false);   // 每帧重置本源条高亮，仅在需要的模式下重新点亮
   const me = mySide(), opp = oppSide();
   const mine = canActNow();
   const endBtn = document.createElement("button");
@@ -145,30 +175,8 @@ function renderActionBar(){
   if(G.waitingPeer){ hint.textContent="等待对方选择防御…"; return; }
   if(!mine||G.ended){ hint.textContent = G.mode==="hotseat" ? `等待 ${sideLabel(me)} 操作…` : "等待中…"; return; }
   if(ui.mode==="attack"){
-    hint.textContent = "选择攻击目标：敌方灵位神兽或敌方本源（点击本源条右侧攻击按钮）";
-    const hpBtn = document.createElement("button");
-    hpBtn.className="btn small"; hpBtn.textContent="攻击敌方本源";
-    hpBtn.onclick=()=>{ const s=me.field[ui.selField]; if(s){
-      const bs = fieldCreatures(opp);
-      if(bs.length>0){
-        if(G.mode==="ai"){
-          resolveHpAttackBy(me, ui.selField, aiPickBlocker(opp, effAtk(s, me), s.element));
-        } else if(G.mode==="hotseat"){
-          ui.mode="defend"; ui.pending={hpAtt:{attSide:me, attIdx:ui.selField}};
-          renderAll(); logMsg(`${s.name} 即将攻击 ${sideLabel(opp)} 本源！由 ${sideLabel(opp)} 选择防御。`,"e");
-        } else {
-          const _ai1 = ui.selField;
-          G.waitingPeer=true; uiReset(); renderAll();
-          pvpAct({t:"hpReq", attIdx:_ai1});
-          logMsg("等待对方选择防御…","s");
-        }
-        return;
-      }
-      const _ai0 = ui.selField;
-      resolveHpAttackBy(me, _ai0, null);
-      if(G.mode==="pvp"){ pvpAct({t:"hpDirect", attIdx:_ai0}); }
-    } };
-    bar.appendChild(hpBtn);
+    hint.textContent = "选择攻击目标：点击敌方神兽，或点击上方敌方本源条直攻本源";
+    markHudTarget(true);
     const cancel=document.createElement("button"); cancel.className="btn small"; cancel.textContent="取消";
     cancel.onclick=()=>{ uiReset(); renderAll(); };
     bar.appendChild(cancel);
@@ -211,32 +219,19 @@ function renderActionBar(){
   } else if(ui.selCard){
     const card = CARDS.find(c=>c.id===ui.selCard);
     if(card.kind==="creature"){
-      hint.textContent = `${card.name}：选择灵位部署`;
-      const free = me.field.map((s,i)=>s?null:i).filter(i=>i!==null);
-      free.forEach(idx=>{
-        const b=document.createElement("button"); b.className="btn small"; b.textContent=`部署到灵位${idx+1}`;
-        b.onclick=()=>{ playCreature(me, card, idx); pvpAct({t:"deploy", cardId:card.id, slotIdx:idx}); uiReset(); renderAll(); };
-        bar.appendChild(b);
-      });
+      // 无按钮式部署：点手牌后直接点己方空灵位（或拖拽牌到灵位）
+      hint.textContent = `${card.name}：点击己方发光的空灵位部署（也可拖动手牌到灵位）`;
     } else {
-      hint.textContent = `${card.name}：选择目标`;
-      if(card.effect.target==="enemyCreature"){
-        ui.mode="artifact"; ui.pending={card:ui.selCard};
-        hint.textContent="选择目标：敌方神兽";
-      } else if(card.effect.target==="ownCreature"){
-        ui.mode="artifactOwn"; ui.pending={card:ui.selCard};
-        hint.textContent="选择目标：友方神兽";
-      } else {
-        const b=document.createElement("button"); b.className="btn"; b.textContent=`使用（本源目标）`;
-        b.onclick=()=>{ me.mana-=card.cost; me.hand.splice(me.hand.indexOf(card.id),1); artifactEffect(card, null, me===G.player?"player":"ai"); pvpAct({t:"artifact", cardId:card.id, targetIdx:null}); uiReset(); renderAll(); };
-        bar.appendChild(b);
-      }
+      // 模式已在 onHandClick 中确定；此处只给提示（避免渲染期改状态导致高亮晚一帧）
+      if(ui.mode==="artifact"){ hint.textContent=`${card.name}：点击一名敌方神兽`; }
+      else if(ui.mode==="artifactOwn"){ hint.textContent=`${card.name}：点击一名友方神兽`; }
+      else { hint.textContent=`${card.name}：点击上方敌方本源条施放`; markHudTarget(true); }
     }
     const cancel=document.createElement("button"); cancel.className="btn small"; cancel.textContent="取消";
     cancel.onclick=()=>{ uiReset(); renderAll(); };
     bar.appendChild(cancel);
   } else {
-    hint.textContent="点击手牌部署神兽 / 点击我方神兽操作";
+    hint.textContent="点击手牌选牌 → 点空灵位部署；点击我方神兽进行操作";
   }
 }
 function effAtk(s, side){
@@ -245,9 +240,18 @@ function effAtk(s, side){
 }
 function onHandClick(hi, playable){
   if(!playable){ logMsg("灵气不足。","s"); return; }
-  ui.selCard = mySide().hand[hi];
-  ui.selField = null; ui.mode="idle";
-  renderHand(); renderActionBar();
+  const id = mySide().hand[hi];
+  if(ui.selCard === id){ uiReset(); renderAll(); return; }   // 再点同一张 = 取消选择（v1.9）
+  ui.selCard = id;
+  ui.selField = null;
+  ui.mode = "idle";
+  const card = CARDS.find(c=>c.id===id);
+  if(card && card.kind==="artifact"){                       // 神器：选牌即进入目标模式（v1.9）
+    if(card.effect.target==="enemyCreature"){ ui.mode="artifact"; ui.pending={card:id}; }
+    else if(card.effect.target==="ownCreature"){ ui.mode="artifactOwn"; ui.pending={card:id}; }
+    else { ui.mode="artifactHp"; ui.pending={card:id}; }
+  }
+  renderAll();
 }
 function onSlotClick(side, idx){
   if(G.ended) return;
@@ -295,6 +299,7 @@ function onSlotClick(side, idx){
     return;
   }
   // 我方区域
+  if(!side.field[idx] && ui.selCard){ if(deployToSlot(idx)) return; }   // 点空灵位直接部署（v1.9）
   if(ui.mode==="artifactOwn"){
     const card = CARDS.find(c=>c.id===ui.pending.card);
     me.mana-=card.cost; me.hand.splice(me.hand.indexOf(card.id),1);
@@ -309,4 +314,60 @@ function onSlotClick(side, idx){
 function onMySlotClick(idx){ onSlotClick(G.player, idx); }
 function onEnemySlotClick(idx){ onSlotClick(G.ai, idx); }
 function uiReset(){ ui.selCard=null; ui.selField=null; ui.mode="idle"; ui.pending={}; }
+
+/* ===== 无按钮式交互（v1.9）：直攻本源 / 直施本源神器 / 点空位或拖拽部署 ===== */
+function markHudTarget(on){
+  const h = document.querySelector(".hud-enemy");
+  if(h){ h.classList.toggle("targetable", !!on); }
+}
+function doAttackHp(){
+  const me = mySide(), opp = oppSide();
+  if(ui.mode!=="attack" || ui.selField===null) return;
+  const s = me.field[ui.selField];
+  if(!s){ uiReset(); renderAll(); return; }
+  const bs = fieldCreatures(opp);
+  if(bs.length>0){
+    if(G.mode==="ai"){
+      resolveHpAttackBy(me, ui.selField, aiPickBlocker(opp, effAtk(s, me), s.element));
+    } else if(G.mode==="hotseat"){
+      ui.mode="defend"; ui.pending={hpAtt:{attSide:me, attIdx:ui.selField}};
+      renderAll(); logMsg(`${s.name} 即将攻击 ${sideLabel(opp)} 本源！由 ${sideLabel(opp)} 选择防御。`,"e");
+    } else {
+      const _ai1 = ui.selField;
+      G.waitingPeer=true; uiReset(); renderAll();
+      pvpAct({t:"hpReq", attIdx:_ai1});
+      logMsg("等待对方选择防御…","s");
+    }
+    return;
+  }
+  const _ai0 = ui.selField;
+  resolveHpAttackBy(me, _ai0, null);
+  if(G.mode==="pvp"){ pvpAct({t:"hpDirect", attIdx:_ai0}); }
+}
+function castArtifactNoTarget(card){
+  const me = mySide();
+  if(!card || me.mana < card.cost || me.hand.indexOf(card.id) < 0) return;
+  me.mana -= card.cost; me.hand.splice(me.hand.indexOf(card.id),1);
+  artifactEffect(card, null, me===G.player?"player":"ai");
+  pvpAct({t:"artifact", cardId:card.id, targetIdx:null});
+  uiReset(); renderAll();
+}
+// 点击上方「敌方本源条」：攻击模式下 = 直攻本源；本源神器 = 直接施放
+function onHudEnemyClick(){
+  if(G.ended || !canActNow()) return;
+  if(ui.mode==="attack"){ doAttackHp(); return; }
+  if(ui.mode==="artifactHp"){ castArtifactNoTarget(CARDS.find(c=>c.id===ui.pending.card)); }
+}
+// 部署到指定灵位（点空位或拖拽落点共用）
+function deployToSlot(idx){
+  const me = mySide();
+  if(!ui.selCard) return false;
+  const card = CARDS.find(c=>c.id===ui.selCard);
+  if(!card || card.kind!=="creature") return false;
+  const r = playCreature(me, card, idx);
+  if(!r || !r.ok){ logMsg("无法部署到该灵位（可能已占用或灵气不足）。","s"); return false; }
+  pvpAct({t:"deploy", cardId:card.id, slotIdx:idx});
+  uiReset(); renderAll();
+  return true;
+}
 
