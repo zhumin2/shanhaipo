@@ -552,6 +552,46 @@
     header .sub{white-space:normal;}
     .zone-title .zres{gap:8px;}
   }
+  /* ===== v2.1：卡牌预览 / 瞄准曲线 / 结算面板 ===== */
+  .card-preview{position:fixed; z-index:76; width:198px; pointer-events:none; opacity:0;
+    background:linear-gradient(180deg,#FFFEF9,#FBF6E9); border:1px solid rgba(201,162,39,.55);
+    border-radius:12px; overflow:hidden; transform:translateY(8px) scale(.97);
+    box-shadow:0 20px 46px rgba(20,16,28,.42), 0 0 0 1px rgba(255,255,255,.6) inset;
+    transition:opacity .14s ease, transform .14s ease;}
+  .card-preview.on{opacity:1; transform:none;}
+  .card-preview img{width:100%; aspect-ratio:3/4; object-fit:cover; display:block;}
+  .card-preview .cp-body{padding:8px 10px 10px;}
+  .card-preview .cp-name{font-size:13.5px; font-weight:800; color:#3D2F5C; letter-spacing:.5px;}
+  .card-preview .cp-meta{font-size:10.5px; color:var(--sub); margin-top:2px;}
+  .card-preview .cp-text{font-size:11px; line-height:1.65; color:#4A4036; margin-top:6px;}
+  .card-preview .cp-skill{margin-top:7px; padding-top:7px; border-top:1px dashed var(--line);
+    font-size:11px; line-height:1.6; color:#6B4FA8;}
+  .card-preview .cp-src{margin-top:6px; font-size:10px; color:var(--sub); font-style:italic;}
+  /* 瞄准曲线 */
+  .aim-layer{position:fixed; inset:0; width:100%; height:100%; pointer-events:none; z-index:66;}
+  .aim-path{fill:none; stroke:rgba(201,162,39,.85); stroke-width:2.5; stroke-linecap:round;
+    stroke-dasharray:9 7; filter:drop-shadow(0 0 6px rgba(201,162,39,.6));
+    animation:aimFlow .6s linear infinite;}
+  .aim-path.locked{stroke:rgba(192,57,43,.92); stroke-width:4; stroke-dasharray:none;
+    filter:drop-shadow(0 0 11px rgba(192,57,43,.85));}
+  @keyframes aimFlow{to{stroke-dashoffset:-32;}}
+  .aim-head{fill:rgba(201,162,39,.95); filter:drop-shadow(0 0 8px rgba(201,162,39,.8));}
+  /* 结算面板 */
+  .endbox .endgrid{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:4px 0 12px;}
+  .endbox .endhp{background:rgba(255,253,246,.85); border:1px solid var(--line); border-radius:10px; padding:7px 10px;
+    display:flex; align-items:center; justify-content:space-between; font-size:11.5px; color:var(--sub);}
+  .endbox .endhp b{font-size:19px; font-variant-numeric:tabular-nums; color:var(--ink);}
+  .endbox .endhp.win b{color:var(--good);}
+  .endbox .endhp.lose b{color:var(--bad);}
+  .endbox .endbars{text-align:left; display:flex; flex-direction:column; gap:6px; margin-bottom:10px;}
+  .endbox .endrow{display:flex; align-items:center; gap:8px; font-size:11px; color:var(--sub);}
+  .endbox .endrow .lbl{flex:0 0 62px;}
+  .endbox .endrow .track{display:block; flex:1 1 auto; height:8px; border-radius:5px; background:rgba(168,160,140,.26); overflow:hidden;}
+  .endbox .endrow .fill{display:block; height:100%; border-radius:5px;
+    background:linear-gradient(90deg,#C9A227,#8FB6E8);
+    transition:width .5s cubic-bezier(.2,.8,.25,1);}
+  .endbox .endrow .val{flex:0 0 46px; text-align:right; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:700;}
+  .endbox .endline{font-size:11px; color:var(--sub); line-height:1.7; border-top:1px dashed var(--line); padding-top:8px;}
   @media (prefers-reduced-motion: reduce){
     *, *::before, *::after{
       animation-duration:.001ms !important; animation-iteration-count:1 !important;
@@ -566,7 +606,7 @@
 <header>
   <div class="brand">
     <h1>山海破</h1>
-    <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v2.0 · 本地档案</div>
+    <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v2.1 · 本地档案</div>
   </div>
   <div class="nav">
     <button class="btn small" onclick="openMenu()">模式</button>

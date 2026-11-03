@@ -98,6 +98,12 @@ function renderField(sideEl, side, isPlayer){
       slot.innerHTML = cardFaceHtml(s, atkMod, !!side.sealedFlags[s.id])
         + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
       slot.addEventListener("click", ()=> onSlotClick(side, idx));
+      const faceEl = slot.querySelector(".card");
+      if(faceEl){
+        const def = CARDS.find(c=>c.id===s.id);
+        faceEl.addEventListener("mouseenter", ()=> showCardPreview(def, slot, s));   // 战场卡预览（带当前数值）
+        faceEl.addEventListener("mouseleave", hideCardPreview);
+      }
     }
     holder.appendChild(slot);
   });
@@ -119,6 +125,8 @@ function renderHand(){
     div.className += (playable?" playable":" notplay") + (ui.selCard===cid?" selected":"");
     div.style.cursor = playable?"pointer":"not-allowed";
     div.addEventListener("click", ()=>{ if(!canActNow()||G.ended) return; onHandClick(hi, playable); });
+    div.addEventListener("mouseenter", ()=> showCardPreview(card, div));      // v2.1 大图预览
+    div.addEventListener("mouseleave", hideCardPreview);
     // 拖拽部署（v1.9）：手牌可拖到己方空灵位
     if(playable && mine && card.kind==="creature"){
       div.setAttribute("draggable","true");
@@ -198,6 +206,7 @@ function renderMeters(){
 }
 function renderAll(){
   if(G.mode==="pvp" && (!G.player || !G.ai)) return;
+  if(typeof hideCardPreview==="function") hideCardPreview();
   const me = mySide(), opp = oppSide();
   renderMeters();
   renderField("myField", me, true);
@@ -212,6 +221,7 @@ function renderActionBar(){
   const hint = document.getElementById("actionHint");
   bar.innerHTML = "";
   markHudTarget(false);   // 每帧重置本源条高亮，仅在需要的模式下重新点亮
+  if(ui.mode!=="attack" && typeof aimClear==="function") aimClear();
   const me = mySide(), opp = oppSide();
   const mine = canActNow();
   const endBtn = document.createElement("button");
