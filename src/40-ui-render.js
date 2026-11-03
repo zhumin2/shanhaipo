@@ -1,4 +1,28 @@
 /* ============ 渲染 ============ */
+// 战场卡面（v2.0 布局重构）：插画铺满 + 费用角标 + 大数值压角，信息密度高于横版列表卡
+function cardFaceHtml(card, atkMod, sealed){
+  const el = ECOLOR[card.element]||"#888";
+  const atk = card.atk + (atkMod||0);
+  const tipParts = [];
+  if(card.effect && card.effect.desc) tipParts.push(card.effect.desc);
+  if(card.broken && card.skill) tipParts.push(`破势技「${card.skill.name}」${card.skill.cost}破势：${card.skill.desc}`);
+  if(sealed) tipParts.push("已镇封：本局不可再破封");
+  const tip = (card.name + (tipParts.length ? "\n" + tipParts.join("\n") : "")).replace(/"/g,"&quot;");
+  return `<div class="card face${card.broken?" broken":""}" title="${tip}">
+    ${ART[card.id]?`<img class="card-art" src="${ART[card.id]}" alt="">`:""}
+    <div class="face-grad"></div>
+    <div class="face-top">
+      <span class="cost-badge">${card.cost}</span>
+      <span class="el-dot" style="background:${el};"></span>
+      <span class="face-name">${card.name}${card.broken?"·破封":""}</span>
+    </div>
+    <div class="face-bottom">
+      <span class="pv atk">${atk}</span>
+      <span class="pv hp">${card.hp}</span>
+      ${card.broken?`<span class="pv rage">狂</span>`:""}
+    </div>
+  </div>`;
+}
 function cardHtml(card, opts){
   opts = opts||{};
   const el = ECOLOR[card.element]||"#888";
@@ -54,7 +78,10 @@ function renderField(sideEl, side, isPlayer){
       slot.className += " targetable";
     }
     if(!s){
-      slot.innerHTML = `<div class="slot-tag">${isDrop ? "点击部署至此" : "灵位 "+(idx+1)}</div>`;
+      slot.innerHTML = `<div class="slot-empty">
+        <span class="plus">＋</span>
+        <span class="lbl">${isDrop ? "点击部署至此" : "灵位 "+(idx+1)}</span>
+      </div>`;
       if(!isPlayer || (ui.selCard && (CARDS.find(c=>c.id===ui.selCard)||{}).kind==="creature")){
         slot.addEventListener("click", ()=> onSlotClick(side, idx));
       }
@@ -68,7 +95,8 @@ function renderField(sideEl, side, isPlayer){
       if(s.frozen) flags.push("冻结");
       if(s.tauntTurn) flags.push("守护");
       if(!s.sick && !s.attacked && !s.defended && !s.frozen) flags.push("待命");
-      slot.innerHTML = cardHtml(s, {atkMod, sealed:!!side.sealedFlags[s.id]}) + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
+      slot.innerHTML = cardFaceHtml(s, atkMod, !!side.sealedFlags[s.id])
+        + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
       slot.addEventListener("click", ()=> onSlotClick(side, idx));
     }
     holder.appendChild(slot);
@@ -103,17 +131,44 @@ function renderHand(){
     }
     area.appendChild(div);
   });
+  // 弧形手牌（v2.0）：按中心偏移给每张牌设定旋转与下沉，越靠边越倾斜
+  const n = me.hand.length;
+  const step = n > 1 ? Math.min(3.6, 15 / n) : 0;
+  for(let i=0;i<area.children.length;i++){
+    const off = i - (n-1)/2;
+    area.children[i].style.setProperty("--rot", (off*step).toFixed(2)+"deg");
+    area.children[i].style.setProperty("--ty", (Math.abs(off)*Math.min(6, 12/n)).toFixed(1)+"px");
+  }
   hint.textContent = mine ? `灵气 ${me.mana}/${me.manaCap} · 手牌 ${me.hand.length}` : (G.mode==="hotseat" ? `等待 ${sideLabel(me)} 操作…` : "等待对方…");
+}
+function renderPips(elId, cur, max){
+  const el = document.getElementById(elId);
+  if(!el) return;
+  if(el.dataset.n !== String(max)){
+    el.dataset.n = String(max);
+    el.innerHTML = Array.from({length:max}, ()=>'<i class="pip"></i>').join("");
+  }
+  const kids = el.children;
+  for(let i=0;i<kids.length;i++){
+    const on = i < cur;
+    const had = kids[i].classList.contains("on");
+    kids[i].classList.toggle("on", on);
+    if(on && !had){ kids[i].classList.remove("pop"); void kids[i].offsetWidth; kids[i].classList.add("pop"); }
+  }
 }
 function renderMeters(){
   const set=(id,txt)=>document.getElementById(id).textContent=txt;
   const me = mySide(), opp = oppSide();
   set("myHp",me.hp); set("aiHp",opp.hp); set("myMana",me.mana); set("aiMana",opp.mana);
   set("myPoshi",me.poshi); set("aiPoshi",opp.poshi); set("myHand",me.hand.length); set("aiHand",opp.hand.length);
+  renderPips("myManaPips", me.mana, me.manaCap);        // v2.0：灵气/破势珠子格
+  renderPips("myPoshiPips", me.poshi, CFG.poshiCap);
   document.getElementById("myHpBar").style.width=(me.hp/CFG.hp*100)+"%";
   document.getElementById("aiHpBar").style.width=(opp.hp/CFG.hp*100)+"%";
-  document.getElementById("myPoshiBar").style.width=(me.poshi/CFG.poshiCap*100)+"%";
-  document.getElementById("aiPoshiBar").style.width=(opp.poshi/CFG.poshiCap*100)+"%";
+  // 破势条已由珠子格取代（v2.0），保留兼容写法但做存在性保护
+  const pb1=document.getElementById("myPoshiBar"), pb2=document.getElementById("aiPoshiBar");
+  if(pb1) pb1.style.width=(me.poshi/CFG.poshiCap*100)+"%";
+  if(pb2) pb2.style.width=(opp.poshi/CFG.poshiCap*100)+"%";
   const tTag = document.getElementById("turnTag");
   if(G.mode==="ai"){ tTag.textContent = `回合 ${G.turn} · ${G.active==="player"?"你的回合":"敌方回合"}`; }
   else if(G.mode==="hotseat"){ tTag.textContent = `回合 ${G.turn} · ${G.active==="player"?"1P 回合":"2P 回合"}`; }
@@ -364,10 +419,16 @@ function deployToSlot(idx){
   if(!ui.selCard) return false;
   const card = CARDS.find(c=>c.id===ui.selCard);
   if(!card || card.kind!=="creature") return false;
+  // 记录手牌位置，用于"飞入灵位"动画（v2.0）
+  const srcEl = document.querySelector("#myHandArea .card.selected") || document.querySelector("#myHandArea .card");
+  const fromRect = srcEl ? srcEl.getBoundingClientRect() : null;
   const r = playCreature(me, card, idx);
   if(!r || !r.ok){ logMsg("无法部署到该灵位（可能已占用或灵气不足）。","s"); return false; }
   pvpAct({t:"deploy", cardId:card.id, slotIdx:idx});
   uiReset(); renderAll();
+  const slotEl = qSlot("myField", idx);
+  const cardEl = slotEl ? slotEl.querySelector(".card") : null;
+  if(fromRect && cardEl){ flyToSlot(fromRect, cardEl.getBoundingClientRect(), ART[card.id]); }
   return true;
 }
 

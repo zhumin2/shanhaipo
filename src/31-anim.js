@@ -73,8 +73,31 @@ function animHp(side, num){
     if(meter && num!=null){ const d=document.createElement("div"); d.className="dmg-num hp"; d.textContent="-"+(num||""); d.style.color="#C0392B"; meter.appendChild(d); setTimeout(()=>d.remove(),950); }
   });
 }
+// v2.0：手牌飞入灵位（FLIP 克隆动画）
+function flyToSlot(fromRect, toRect, artSrc){
+  if(!fromRect || !toRect || !artSrc) return;
+  const el = document.createElement("div");
+  el.className = "fly-card";
+  el.style.left = fromRect.left+"px";
+  el.style.top = fromRect.top+"px";
+  el.style.width = fromRect.width+"px";
+  el.style.height = fromRect.height+"px";
+  el.innerHTML = `<img src="${artSrc}" alt="">`;
+  document.body.appendChild(el);
+  const dx = (toRect.left + toRect.width/2) - (fromRect.left + fromRect.width/2);
+  const dy = (toRect.top + toRect.height/2) - (fromRect.top + fromRect.height/2);
+  const sc = Math.max(.2, toRect.width / fromRect.width);
+  requestAnimationFrame(()=>{
+    el.style.transform = `translate(${dx}px, ${dy}px) scale(${sc})`;
+    el.style.opacity = "0.15";
+  });
+  setTimeout(()=>el.remove(), 520);
+}
 function animTurn(text){
   const d = document.createElement("div"); d.className="turn-banner"; d.textContent = text;
   document.body.appendChild(d); setTimeout(()=>d.remove(), 1450);
+  // v2.0：回合切换时一道金光横向扫过
+  const s = document.createElement("div"); s.className="turn-sweep";
+  document.body.appendChild(s); setTimeout(()=>s.remove(), 1100);
 }
 
