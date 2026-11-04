@@ -83,17 +83,57 @@ function aimDraw(toX, toY, snapped){
   }
   if(aimHead){ aimHead.setAttribute("cx", toX); aimHead.setAttribute("cy", toY); }
 }
+/* ---------- 瞄准伤害预告（v3.0）：把"造成多少、是否克制、能否击杀"直接算给玩家 ---------- */
+let aimTipEl = null;
+function aimTipShow(x, y, html){
+  if(!aimTipEl){
+    aimTipEl = document.createElement("div");
+    aimTipEl.className = "aim-tip";
+    document.body.appendChild(aimTipEl);
+  }
+  aimTipEl.innerHTML = html;
+  aimTipEl.style.left = Math.round(x) + "px";
+  aimTipEl.style.top  = Math.round(y) + "px";
+  aimTipEl.classList.add("on");
+}
+function aimTipHide(){
+  if(aimTipEl) aimTipEl.classList.remove("on");
+}
+function aimPreviewHtml(targetUnit){
+  const me = mySide();
+  if(!me || ui.selField===null) return null;
+  const att = me.field[ui.selField];
+  if(!att || !targetUnit) return null;
+  const base = effAtk(att, me);
+  const mod = getCounterMod(att.element, targetUnit.element);
+  const dmg = Math.max(CFG.minDamage, base + mod);
+  const kill = dmg >= targetUnit.hp;
+  let extra = "";
+  if(mod > 0) extra = ` <span style="color:#FFD98A">克制 +${mod}</span>`;
+  else if(mod < 0) extra = ` <span class="weak">被克 −${-mod}</span>`;
+  const killTxt = kill ? ` <span class="kill">· 击杀</span>` : ` · 余 ${targetUnit.hp - dmg}`;
+  return `<b>−${dmg}</b>${extra}${killTxt}`;
+}
+
 // 全局监听：仅在攻击模式下生效
 document.addEventListener("mousemove", (e)=>{
-  if(!G || !G.player || G.ended){ aimClear(); return; }
-  if(ui.mode!=="attack"){ aimClear(); return; }
+  if(!G || !G.player || G.ended){ aimClear(); aimTipHide(); return; }
+  if(ui.mode!=="attack"){ aimClear(); aimTipHide(); return; }
   const el = document.elementFromPoint(e.clientX, e.clientY);
   const slot = el && el.closest ? el.closest("#aiField .slot") : null;
   const targetCard = slot ? slot.querySelector(".card") : null;
   if(targetCard){
     const tr = targetCard.getBoundingClientRect();
     aimDraw(tr.left + tr.width/2, tr.top + tr.height/2, true);
+    const idx = Number(slot.dataset.slotIdx);
+    const opp = oppSide();
+    const unit = opp && opp.field[idx];
+    const html = unit ? aimPreviewHtml(unit) : null;
+    if(html) aimTipShow(tr.right - 6, tr.top + 8, html);
+    else aimTipHide();
   } else {
     aimDraw(e.clientX, e.clientY, false);
+    // 未指向目标时提示"点本源条可直攻本源"
+    aimTipShow(e.clientX, e.clientY, `<span style="opacity:.85">点击上方敌方本源条 → 直攻本源</span>`);
   }
 });

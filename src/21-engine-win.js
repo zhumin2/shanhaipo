@@ -19,6 +19,9 @@ function endBar(label, val, max, txt){
 function showEnd(){
   EVflush(); // 终局前清空事件队列，保证最后一批日志/动画可见
   const w = G.winner;
+  if(typeof SFX !== "undefined"){
+    SFX.play((w === "ai") ? "lose" : "win");
+  }
   const st = G.stats;
   const meIsP1 = (G.mode === "pvp") ? (G.role === "p1") : true;
   const myHp = meIsP1 ? G.player.hp : G.ai.hp;
@@ -42,6 +45,14 @@ function showEnd(){
     + endBar("狂性", st.raged, 5, `${st.raged} 次`)
     + `</div>`;
   if(st.sealed > 0) html += `<div class="endline">镇封 ${st.sealed} 次 ｜ 重开 ${st.mulligan} 次</div>`;
+  // v3.0 本局点评：把统计翻译成一句可执行的反馈
+  if(st.attacks > 0){
+    const tips = [];
+    tips.push(counterPct >= 50 ? "五行克制用得不错" : "克制利用偏少，试着针对对方元素下手");
+    if(st.raged >= 2) tips.push(`狂性反噬 ${st.raged} 次，破封后记得让神兽出手`);
+    if(st.breaks === 0 && st.poshi >= CFG.breakMid) tips.push("破势攒着没用，破封能换来 +2/+2 与破势技");
+    html += `<div class="endline">本局点评：${tips.join("；")}。</div>`;
+  }
   const __rec = (typeof UserSys!=="undefined") ? UserSys.recordGame(G) : null;
   if(__rec){
     const sm = UserSys.summary();

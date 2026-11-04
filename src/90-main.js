@@ -2,6 +2,7 @@
 UserSys.init();
 openMenu();
 syncCfgInputs();
+if(typeof syncSfxBtn === "function") syncSfxBtn();
 // v1.9：Esc 取消当前选择（无按钮式交互的逃生口）
 document.addEventListener("keydown", (e)=>{
   if(e.key==="Escape"){

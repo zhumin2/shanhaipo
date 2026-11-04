@@ -25,6 +25,7 @@ function newGame(mode, role, seed){
     log: [], eventSeq: 0,
   };
   EVQ = []; // 事件队列随对局重置（T1-A2）
+  if(typeof logClear==="function"){ logClear(); } // 换局清空日志面板（newGame 已含 UI 副作用：hideMenu/hideEnd）
   for(let i=0;i<3;i++){ G.player.hand.push(G.player.deck.pop()); }
   for(let i=0;i<3;i++){ G.ai.hand.push(G.ai.deck.pop()); }
   if(typeof UserSys!=="undefined"){ UserSys.oppName = null; } // PvP 对手昵称随对局重置（hello/init.name 重新交换）

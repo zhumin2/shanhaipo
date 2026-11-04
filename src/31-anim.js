@@ -38,9 +38,10 @@ function goldBurst(el){
     setTimeout(()=>m.remove(), 1150 + i*24);
   });
 }
-function animLunge(sideEl, idx){ pushAnim(()=>replay(qCard(sideEl, idx), sideEl==="myField"?"anim-lunge":"anim-lunge-r")); }
+function animLunge(sideEl, idx){ pushAnim(()=>{ if(typeof SFX!=="undefined") SFX.play("swing"); replay(qCard(sideEl, idx), sideEl==="myField"?"anim-lunge":"anim-lunge-r"); }); }
 function animHit(sideEl, idx, num, color, crit){
   pushAnim(()=>{
+    if(typeof SFX!=="undefined") SFX.play(crit ? "crit" : "hit");
     replay(qCard(sideEl, idx), "anim-hit");
     if(num!=null){ const slot=qSlot(sideEl, idx); if(slot){
       const d=document.createElement("div");
@@ -51,21 +52,23 @@ function animHit(sideEl, idx, num, color, crit){
     } }
   });
 }
-function animSummon(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-summon"); addRing(el); }); }
-function animBreak(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-break"); addBurst(el); goldBurst(el); }); }
-function animSeal(sideEl, idx){ pushAnim(()=>replay(qCard(sideEl, idx), "anim-seal")); }
+function animSummon(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); if(typeof SFX!=="undefined") SFX.play("place"); replay(el,"anim-summon"); addRing(el); }); }
+function animBreak(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); if(typeof SFX!=="undefined") SFX.play("break"); replay(el,"anim-break"); addBurst(el); goldBurst(el); }); }
+function animSeal(sideEl, idx){ pushAnim(()=>{ if(typeof SFX!=="undefined") SFX.play("seal"); replay(qCard(sideEl, idx), "anim-seal"); }); }
 function animSkill(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-skill"); addBurst(el); }); }
 // v1.7：阵亡飘字（灵位仍存在，卡牌已被移除）
 function animDeath(sideEl, idx){
   pushAnim(()=>{
     const slot = qSlot(sideEl, idx);
     if(!slot || slot.querySelector(".death-mark")) return;
+    if(typeof SFX!=="undefined") SFX.play("death");
     const m = document.createElement("div"); m.className="death-mark"; m.textContent="阵亡";
     slot.appendChild(m); goldBurst(slot); setTimeout(()=>m.remove(), 1150);
   });
 }
 function animHp(side, num){
   pushAnim(()=>{
+    if(typeof SFX!=="undefined") SFX.play("hp");
     const bar = document.getElementById((side===mySide()?"my":"ai")+"HpBar"); // 视角修正：按本端我方判定（TDD-01）
     replay(bar, "anim-hp");
     const meter = bar ? bar.closest(".meter") : null;
@@ -94,6 +97,7 @@ function flyToSlot(fromRect, toRect, artSrc){
   setTimeout(()=>el.remove(), 520);
 }
 function animTurn(text){
+  if(typeof SFX!=="undefined") SFX.play("turn");
   const d = document.createElement("div"); d.className="turn-banner"; d.textContent = text;
   document.body.appendChild(d); setTimeout(()=>d.remove(), 1450);
   // v2.0：回合切换时一道金光横向扫过

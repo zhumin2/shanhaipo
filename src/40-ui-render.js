@@ -98,6 +98,18 @@ function renderField(sideEl, side, isPlayer){
       slot.innerHTML = cardFaceHtml(s, atkMod, !!side.sealedFlags[s.id])
         + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
       slot.addEventListener("click", ()=> onSlotClick(side, idx));
+      // v3.0 防御预演：算出每只候选"挡住会掉多少血、能否生还"
+      if(ui.mode==="defend" && side === pendingDefenderSide()){
+        const info = pendingAttackInfo();
+        if(info && !s.sick && !s.attacked && !s.defended && !s.frozen){
+          const dmg = Math.max(CFG.minDamage, info.atk + getCounterMod(info.element, s.element));
+          const survive = (s.hp - dmg) > 0;
+          const bd = document.createElement("div");
+          bd.className = "def-badge " + (survive ? "safe" : "dead");
+          bd.innerHTML = `挡住 <b>−${dmg}</b>${survive ? ` · 生还 ${s.hp - dmg}` : " · 阵亡"}`;
+          slot.appendChild(bd);
+        }
+      }
       const faceEl = slot.querySelector(".card");
       if(faceEl){
         const def = CARDS.find(c=>c.id===s.id);
@@ -149,7 +161,7 @@ function renderHand(){
   }
   hint.textContent = mine ? `灵气 ${me.mana}/${me.manaCap} · 手牌 ${me.hand.length}` : (G.mode==="hotseat" ? `等待 ${sideLabel(me)} 操作…` : "等待对方…");
 }
-function renderPips(elId, cur, max){
+function renderPips(elId, cur, max, spend){
   const el = document.getElementById(elId);
   if(!el) return;
   if(el.dataset.n !== String(max)){
@@ -161,6 +173,8 @@ function renderPips(elId, cur, max){
     const on = i < cur;
     const had = kids[i].classList.contains("on");
     kids[i].classList.toggle("on", on);
+    kids[i].classList.toggle("spend", !!spend && i < spend);          // v3.0 将被消耗
+    kids[i].classList.toggle("left", !!spend && i >= spend && i < cur); // 消耗后剩余
     if(on && !had){ kids[i].classList.remove("pop"); void kids[i].offsetWidth; kids[i].classList.add("pop"); }
   }
 }
@@ -169,7 +183,13 @@ function renderMeters(){
   const me = mySide(), opp = oppSide();
   set("myHp",me.hp); set("aiHp",opp.hp); set("myMana",me.mana); set("aiMana",opp.mana);
   set("myPoshi",me.poshi); set("aiPoshi",opp.poshi); set("myHand",me.hand.length); set("aiHand",opp.hand.length);
-  renderPips("myManaPips", me.mana, me.manaCap);        // v2.0：灵气/破势珠子格
+  // v3.0 预演：选中卡牌时，标出"将消耗 / 消耗后剩余"的灵气
+  let spendMana = 0;
+  if(ui.selCard){
+    const sc = CARDS.find(c=>c.id===ui.selCard);
+    if(sc && sc.cost <= me.mana) spendMana = sc.cost;
+  }
+  renderPips("myManaPips", me.mana, me.manaCap, spendMana);
   renderPips("myPoshiPips", me.poshi, CFG.poshiCap);
   document.getElementById("myHpBar").style.width=(me.hp/CFG.hp*100)+"%";
   document.getElementById("aiHpBar").style.width=(opp.hp/CFG.hp*100)+"%";
@@ -226,12 +246,15 @@ function renderActionBar(){
   const mine = canActNow();
   const endBtn = document.createElement("button");
   endBtn.className = "btn primary"; endBtn.textContent="结束回合";
-  endBtn.onclick = ()=>{ if(canActNow()) endTurn(); };
+  endBtn.onclick = ()=>{ if(canActNow()) requestEndTurn(); };
   endBtn.disabled = !mine||G.ended||G.waitingPeer;
   bar.appendChild(endBtn);
 
   if(ui.mode==="defend"){
-    hint.textContent = `敌方（${sideLabel(opp)}）神兽来袭：点击己方可行动神兽挺身防御（本回合部署的无法行动），或放弃防御`;
+    const _pi = pendingAttackInfo();
+    hint.textContent = _pi
+      ? `敌方（${sideLabel(opp)}）神兽来袭：不拦截则本源 −${_pi.atk}；点击己方可行动神兽挺身（卡上已标注结果），或放弃防御`
+      : `敌方（${sideLabel(opp)}）神兽来袭：点击己方可行动神兽挺身防御，或放弃防御`;
     const give=document.createElement("button"); give.className="btn small alert"; give.textContent="放弃防御（本源承受）";
     give.onclick=()=>{ resolveDefend(null); };
     bar.appendChild(give);
@@ -379,6 +402,79 @@ function onSlotClick(side, idx){
 function onMySlotClick(idx){ onSlotClick(G.player, idx); }
 function onEnemySlotClick(idx){ onSlotClick(G.ai, idx); }
 function uiReset(){ ui.selCard=null; ui.selField=null; ui.mode="idle"; ui.pending={}; }
+
+/* ===== v3.0：确认弹窗 / 结束回合狂性预告 / 来袭攻击解析 / 音效开关 ===== */
+let __confirmCb = null;
+function showConfirm(title, text, okText, cb){
+  document.getElementById("confirmTitle").textContent = title;
+  document.getElementById("confirmText").innerHTML = text;
+  document.getElementById("confirmOk").textContent = okText || "确定";
+  __confirmCb = cb || null;
+  document.getElementById("confirmPanel").style.display = "flex";
+}
+function closeConfirm(ok){
+  document.getElementById("confirmPanel").style.display = "none";
+  const cb = __confirmCb; __confirmCb = null;
+  if(ok && cb){ cb(); }
+}
+// 点击"结束回合"：若有破封神兽本回合未行动，先告知狂性反噬代价
+function requestEndTurn(){
+  if(G.ended || !canActNow()) return;
+  const me = mySide();
+  if(G.mode==="pvp" && G.waitingPeer) return;
+  const rageUnits = me.field.filter(s=>s && s.broken && !s.attacked && !s.frozen && !s.skillUsed);
+  if(rageUnits.length > 0){
+    const loss = rageUnits.length * CFG.rageDamage;
+    const names = rageUnits.map(s=>s.name).join("、");
+    showConfirm("结束回合？",
+      `场上 <b>${names}</b> 本回合未出手，结束时将触发狂性反噬：<br>你的本源 <b style="color:#C0392B">−${loss}</b>（当前 ${me.hp}）。`,
+      "仍然结束", ()=> endTurn());
+    return;
+  }
+  endTurn();
+}
+// 判定"谁需要选择防御者"：三种模式的发起方结构不同，避免在热座/PvP 下把徽标贴到攻击方场上
+function pendingDefenderSide(){
+  if(!ui || ui.mode!=="defend" || !G) return null;
+  let attacker = null;
+  if(ui.pending && ui.pending.s){                       // 打 AI：敌方神兽挂起
+    attacker = G.ai;
+  } else if(ui.pending && ui.pending.hpAtt){            // 热座：当前行动方发起
+    attacker = ui.pending.hpAtt.attSide;
+  } else if(ui.pending && ui.pending.hpReq){            // PvP：远端 role 发起
+    attacker = localSide(ui.pending.hpReq.attRole);
+  }
+  if(!attacker) return null;
+  return attacker === G.player ? G.ai : G.player;
+}
+// 解析当前待处理的"攻本源"请求，返回 {atk, element, name}（三种模式结构不同）
+function pendingAttackInfo(){
+  if(!ui || !ui.pending) return null;
+  if(ui.pending.s && ui.pending.atk != null){          // 打 AI：敌方挂起
+    return { atk: ui.pending.atk, element: ui.pending.s.element, name: ui.pending.s.name };
+  }
+  if(ui.pending.hpAtt){                                 // 热座
+    const p = ui.pending.hpAtt, s = p.attSide.field[p.attIdx];
+    if(!s) return null;
+    return { atk: effAtk(s, p.attSide), element: s.element, name: s.name };
+  }
+  if(ui.pending.hpReq){                                 // PvP
+    const p = ui.pending.hpReq, side = localSide(p.attRole), s = side.field[p.attIdx];
+    if(!s) return null;
+    return { atk: effAtk(s, side), element: s.element, name: s.name };
+  }
+  return null;
+}
+function toggleSfx(){
+  const on = SFX.toggle();
+  const b = document.getElementById("sfxBtn");
+  if(b){ b.textContent = on ? "音效 开" : "音效 关"; b.style.opacity = on ? "1" : ".6"; }
+  if(on) logMsg("音效已开启。","s"); else logMsg("音效已关闭。","s");
+}
+function syncSfxBtn(){
+  const b = document.getElementById("sfxBtn");
+  if(b){ const on = SFX.on(); b.textContent = on ? "音效 开" : "音效 关"; b.style.opacity = on ? "1" : ".6"; }
+}
 
 /* ===== 无按钮式交互（v1.9）：直攻本源 / 直施本源神器 / 点空位或拖拽部署 ===== */
 function markHudTarget(on){
