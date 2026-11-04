@@ -592,6 +592,45 @@
     transition:width .5s cubic-bezier(.2,.8,.25,1);}
   .endbox .endrow .val{flex:0 0 46px; text-align:right; font-variant-numeric:tabular-nums; color:var(--ink); font-weight:700;}
   .endbox .endline{font-size:11px; color:var(--sub); line-height:1.7; border-top:1px dashed var(--line); padding-top:8px;}
+  /* ===== v3.0：预演式决策 / 防御结果预告 / 确认弹窗 / 音效开关 ===== */
+  /* 灵气珠子预演：将被消耗 / 消耗后剩余 */
+  .pip.spend{background:linear-gradient(160deg,#FFD98A,#C9A227) !important;
+    box-shadow:0 0 10px rgba(201,162,39,.85), inset 0 1px 0 rgba(255,255,255,.6) !important;
+    animation:pipSpend 1.1s ease-in-out infinite;}
+  @keyframes pipSpend{0%,100%{transform:rotate(45deg) scale(1);} 50%{transform:rotate(45deg) scale(1.18);}}
+  .pip.left{opacity:.42; filter:grayscale(.4);}
+  /* 防御结果预告 */
+  .def-badge{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); z-index:6;
+    min-width:74px; text-align:center; font-size:10.5px; font-weight:700; line-height:1.35;
+    padding:3px 7px; border-radius:9px; pointer-events:none; white-space:nowrap;
+    background:rgba(255,253,246,.97); border:1px solid var(--line);
+    box-shadow:0 2px 9px rgba(0,0,0,.22);}
+  .def-badge.safe{color:#2F6B3C; border-color:rgba(62,142,78,.55); background:rgba(240,250,242,.97);}
+  .def-badge.dead{color:var(--bad); border-color:rgba(192,57,43,.5); background:rgba(255,241,240,.97);}
+  .def-badge b{font-size:12.5px;}
+  /* 本源"不拦代价"提示 */
+  .hud-side .srcbait{position:absolute; right:0; bottom:-17px; z-index:6; font-size:10px; font-weight:700;
+    color:var(--bad); background:rgba(255,253,246,.96); border:1px solid rgba(192,57,43,.38);
+    border-radius:8px; padding:1px 7px; white-space:nowrap; pointer-events:none;
+    box-shadow:0 2px 8px rgba(0,0,0,.14);}
+  /* 瞄准伤害预告 */
+  .aim-tip{position:fixed; z-index:78; pointer-events:none; padding:5px 9px; border-radius:9px;
+    font-size:11.5px; font-weight:700; color:#FFFDF6; white-space:nowrap; opacity:0;
+    background:linear-gradient(180deg,rgba(58,44,78,.96),rgba(38,28,54,.96));
+    border:1px solid rgba(201,162,39,.75); box-shadow:0 8px 22px rgba(0,0,0,.4);
+    transition:opacity .1s ease; transform:translate(14px,14px);}
+  .aim-tip.on{opacity:1;}
+  .aim-tip b{color:#FFD98A; font-size:14px;}
+  .aim-tip .kill{color:#FF9A8E;}
+  .aim-tip .weak{color:#C9B8E8;}
+  /* 确认弹窗 */
+  .confirmbox{background:var(--card); border-radius:16px; padding:22px 26px; max-width:420px; width:92%;
+    text-align:center; border:1px solid rgba(201,162,39,.4);
+    box-shadow:0 24px 60px rgba(20,16,28,.44), 0 0 0 6px rgba(255,253,246,.5) inset;}
+  .confirmbox h2{font-size:18px; letter-spacing:3px; color:#3D2F5C; margin-bottom:10px;}
+  .confirmbox .confirmtext{font-size:13px; line-height:1.85; color:#4A4036; margin-bottom:16px;}
+  .confirmbox .confirmbtns{display:flex; gap:10px; justify-content:center;}
+  .confirmbox .confirmbtns .btn{min-width:104px;}
   @media (prefers-reduced-motion: reduce){
     *, *::before, *::after{
       animation-duration:.001ms !important; animation-iteration-count:1 !important;
@@ -606,12 +645,13 @@
 <header>
   <div class="brand">
     <h1>山海破</h1>
-    <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v2.1 · 本地档案</div>
+    <div class="sub">可玩原型 · 规则集 SHANHAIPO-006 · v3.0 · 本地档案</div>
   </div>
   <div class="nav">
     <button class="btn small" onclick="openMenu()">模式</button>
     <button class="btn small" onclick="toggleHelp()">操作说明</button>
     <button class="btn small" onclick="openUserPanel()">档案</button>
+    <button class="btn small" id="sfxBtn" onclick="toggleSfx()">音效</button>
     <button class="btn small" onclick="toggleDebug()">调试面板</button>
     <button class="btn small alert" onclick="restartGame()">重新开局</button>
   </div>
@@ -723,6 +763,18 @@
   </div>
 </div>
 
+</div>
+
+<!-- 通用确认弹窗（v3.0：结束回合狂性提示等） -->
+<div class="modemenu" id="confirmPanel" style="display:none;">
+  <div class="confirmbox">
+    <h2 id="confirmTitle">确认</h2>
+    <div class="confirmtext" id="confirmText"></div>
+    <div class="confirmbtns">
+      <button class="btn" onclick="closeConfirm(false)">取消</button>
+      <button class="btn primary" onclick="closeConfirm(true)" id="confirmOk">确定</button>
+    </div>
+  </div>
 </div>
 
 <!-- 操作说明（弹窗化，释放战场纵向空间） -->
@@ -938,6 +990,7 @@ function newGame(mode, role, seed){
     log: [], eventSeq: 0,
   };
   EVQ = []; // 事件队列随对局重置（T1-A2）
+  if(typeof logClear==="function"){ logClear(); } // 换局清空日志面板（newGame 已含 UI 副作用：hideMenu/hideEnd）
   for(let i=0;i<3;i++){ G.player.hand.push(G.player.deck.pop()); }
   for(let i=0;i<3;i++){ G.ai.hand.push(G.ai.deck.pop()); }
   if(typeof UserSys!=="undefined"){ UserSys.oppName = null; } // PvP 对手昵称随对局重置（hello/init.name 重新交换）
@@ -1551,6 +1604,9 @@ function endBar(label, val, max, txt){
 function showEnd(){
   EVflush(); // 终局前清空事件队列，保证最后一批日志/动画可见
   const w = G.winner;
+  if(typeof SFX !== "undefined"){
+    SFX.play((w === "ai") ? "lose" : "win");
+  }
   const st = G.stats;
   const meIsP1 = (G.mode === "pvp") ? (G.role === "p1") : true;
   const myHp = meIsP1 ? G.player.hp : G.ai.hp;
@@ -1574,6 +1630,14 @@ function showEnd(){
     + endBar("狂性", st.raged, 5, `${st.raged} 次`)
     + `</div>`;
   if(st.sealed > 0) html += `<div class="endline">镇封 ${st.sealed} 次 ｜ 重开 ${st.mulligan} 次</div>`;
+  // v3.0 本局点评：把统计翻译成一句可执行的反馈
+  if(st.attacks > 0){
+    const tips = [];
+    tips.push(counterPct >= 50 ? "五行克制用得不错" : "克制利用偏少，试着针对对方元素下手");
+    if(st.raged >= 2) tips.push(`狂性反噬 ${st.raged} 次，破封后记得让神兽出手`);
+    if(st.breaks === 0 && st.poshi >= CFG.breakMid) tips.push("破势攒着没用，破封能换来 +2/+2 与破势技");
+    html += `<div class="endline">本局点评：${tips.join("；")}。</div>`;
+  }
   const __rec = (typeof UserSys!=="undefined") ? UserSys.recordGame(G) : null;
   if(__rec){
     const sm = UserSys.summary();
@@ -1599,6 +1663,11 @@ function logMsg(txt, kind){
   box.appendChild(div);
   box.scrollTop = box.scrollHeight;
   if(box.children.length>120){ box.removeChild(box.firstChild); }
+}
+// 清空日志面板（换局时调用，避免上一局的记录残留在当前对局里）
+function logClear(){
+  const box = document.getElementById("logBox");
+  if(box) box.innerHTML = "";
 }
 
 /* ============ 战斗动画（表现层，不改变规则结算） ============ */
@@ -1665,9 +1734,10 @@ function goldBurst(el){
     setTimeout(()=>m.remove(), 1150 + i*24);
   });
 }
-function animLunge(sideEl, idx){ pushAnim(()=>replay(qCard(sideEl, idx), sideEl==="myField"?"anim-lunge":"anim-lunge-r")); }
+function animLunge(sideEl, idx){ pushAnim(()=>{ if(typeof SFX!=="undefined") SFX.play("swing"); replay(qCard(sideEl, idx), sideEl==="myField"?"anim-lunge":"anim-lunge-r"); }); }
 function animHit(sideEl, idx, num, color, crit){
   pushAnim(()=>{
+    if(typeof SFX!=="undefined") SFX.play(crit ? "crit" : "hit");
     replay(qCard(sideEl, idx), "anim-hit");
     if(num!=null){ const slot=qSlot(sideEl, idx); if(slot){
       const d=document.createElement("div");
@@ -1678,21 +1748,23 @@ function animHit(sideEl, idx, num, color, crit){
     } }
   });
 }
-function animSummon(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-summon"); addRing(el); }); }
-function animBreak(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-break"); addBurst(el); goldBurst(el); }); }
-function animSeal(sideEl, idx){ pushAnim(()=>replay(qCard(sideEl, idx), "anim-seal")); }
+function animSummon(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); if(typeof SFX!=="undefined") SFX.play("place"); replay(el,"anim-summon"); addRing(el); }); }
+function animBreak(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); if(typeof SFX!=="undefined") SFX.play("break"); replay(el,"anim-break"); addBurst(el); goldBurst(el); }); }
+function animSeal(sideEl, idx){ pushAnim(()=>{ if(typeof SFX!=="undefined") SFX.play("seal"); replay(qCard(sideEl, idx), "anim-seal"); }); }
 function animSkill(sideEl, idx){ pushAnim(()=>{ const el=qCard(sideEl, idx); replay(el,"anim-skill"); addBurst(el); }); }
 // v1.7：阵亡飘字（灵位仍存在，卡牌已被移除）
 function animDeath(sideEl, idx){
   pushAnim(()=>{
     const slot = qSlot(sideEl, idx);
     if(!slot || slot.querySelector(".death-mark")) return;
+    if(typeof SFX!=="undefined") SFX.play("death");
     const m = document.createElement("div"); m.className="death-mark"; m.textContent="阵亡";
     slot.appendChild(m); goldBurst(slot); setTimeout(()=>m.remove(), 1150);
   });
 }
 function animHp(side, num){
   pushAnim(()=>{
+    if(typeof SFX!=="undefined") SFX.play("hp");
     const bar = document.getElementById((side===mySide()?"my":"ai")+"HpBar"); // 视角修正：按本端我方判定（TDD-01）
     replay(bar, "anim-hp");
     const meter = bar ? bar.closest(".meter") : null;
@@ -1721,6 +1793,7 @@ function flyToSlot(fromRect, toRect, artSrc){
   setTimeout(()=>el.remove(), 520);
 }
 function animTurn(text){
+  if(typeof SFX!=="undefined") SFX.play("turn");
   const d = document.createElement("div"); d.className="turn-banner"; d.textContent = text;
   document.body.appendChild(d); setTimeout(()=>d.remove(), 1450);
   // v2.0：回合切换时一道金光横向扫过
@@ -1828,6 +1901,18 @@ function renderField(sideEl, side, isPlayer){
       slot.innerHTML = cardFaceHtml(s, atkMod, !!side.sealedFlags[s.id])
         + (flags.length?`<div class="slot-tag">${flags.join(" · ")}</div>`:`<div class="slot-tag"></div>`);
       slot.addEventListener("click", ()=> onSlotClick(side, idx));
+      // v3.0 防御预演：算出每只候选"挡住会掉多少血、能否生还"
+      if(ui.mode==="defend" && side === pendingDefenderSide()){
+        const info = pendingAttackInfo();
+        if(info && !s.sick && !s.attacked && !s.defended && !s.frozen){
+          const dmg = Math.max(CFG.minDamage, info.atk + getCounterMod(info.element, s.element));
+          const survive = (s.hp - dmg) > 0;
+          const bd = document.createElement("div");
+          bd.className = "def-badge " + (survive ? "safe" : "dead");
+          bd.innerHTML = `挡住 <b>−${dmg}</b>${survive ? ` · 生还 ${s.hp - dmg}` : " · 阵亡"}`;
+          slot.appendChild(bd);
+        }
+      }
       const faceEl = slot.querySelector(".card");
       if(faceEl){
         const def = CARDS.find(c=>c.id===s.id);
@@ -1879,7 +1964,7 @@ function renderHand(){
   }
   hint.textContent = mine ? `灵气 ${me.mana}/${me.manaCap} · 手牌 ${me.hand.length}` : (G.mode==="hotseat" ? `等待 ${sideLabel(me)} 操作…` : "等待对方…");
 }
-function renderPips(elId, cur, max){
+function renderPips(elId, cur, max, spend){
   const el = document.getElementById(elId);
   if(!el) return;
   if(el.dataset.n !== String(max)){
@@ -1891,6 +1976,8 @@ function renderPips(elId, cur, max){
     const on = i < cur;
     const had = kids[i].classList.contains("on");
     kids[i].classList.toggle("on", on);
+    kids[i].classList.toggle("spend", !!spend && i < spend);          // v3.0 将被消耗
+    kids[i].classList.toggle("left", !!spend && i >= spend && i < cur); // 消耗后剩余
     if(on && !had){ kids[i].classList.remove("pop"); void kids[i].offsetWidth; kids[i].classList.add("pop"); }
   }
 }
@@ -1899,7 +1986,13 @@ function renderMeters(){
   const me = mySide(), opp = oppSide();
   set("myHp",me.hp); set("aiHp",opp.hp); set("myMana",me.mana); set("aiMana",opp.mana);
   set("myPoshi",me.poshi); set("aiPoshi",opp.poshi); set("myHand",me.hand.length); set("aiHand",opp.hand.length);
-  renderPips("myManaPips", me.mana, me.manaCap);        // v2.0：灵气/破势珠子格
+  // v3.0 预演：选中卡牌时，标出"将消耗 / 消耗后剩余"的灵气
+  let spendMana = 0;
+  if(ui.selCard){
+    const sc = CARDS.find(c=>c.id===ui.selCard);
+    if(sc && sc.cost <= me.mana) spendMana = sc.cost;
+  }
+  renderPips("myManaPips", me.mana, me.manaCap, spendMana);
   renderPips("myPoshiPips", me.poshi, CFG.poshiCap);
   document.getElementById("myHpBar").style.width=(me.hp/CFG.hp*100)+"%";
   document.getElementById("aiHpBar").style.width=(opp.hp/CFG.hp*100)+"%";
@@ -1956,12 +2049,15 @@ function renderActionBar(){
   const mine = canActNow();
   const endBtn = document.createElement("button");
   endBtn.className = "btn primary"; endBtn.textContent="结束回合";
-  endBtn.onclick = ()=>{ if(canActNow()) endTurn(); };
+  endBtn.onclick = ()=>{ if(canActNow()) requestEndTurn(); };
   endBtn.disabled = !mine||G.ended||G.waitingPeer;
   bar.appendChild(endBtn);
 
   if(ui.mode==="defend"){
-    hint.textContent = `敌方（${sideLabel(opp)}）神兽来袭：点击己方可行动神兽挺身防御（本回合部署的无法行动），或放弃防御`;
+    const _pi = pendingAttackInfo();
+    hint.textContent = _pi
+      ? `敌方（${sideLabel(opp)}）神兽来袭：不拦截则本源 −${_pi.atk}；点击己方可行动神兽挺身（卡上已标注结果），或放弃防御`
+      : `敌方（${sideLabel(opp)}）神兽来袭：点击己方可行动神兽挺身防御，或放弃防御`;
     const give=document.createElement("button"); give.className="btn small alert"; give.textContent="放弃防御（本源承受）";
     give.onclick=()=>{ resolveDefend(null); };
     bar.appendChild(give);
@@ -2109,6 +2205,79 @@ function onSlotClick(side, idx){
 function onMySlotClick(idx){ onSlotClick(G.player, idx); }
 function onEnemySlotClick(idx){ onSlotClick(G.ai, idx); }
 function uiReset(){ ui.selCard=null; ui.selField=null; ui.mode="idle"; ui.pending={}; }
+
+/* ===== v3.0：确认弹窗 / 结束回合狂性预告 / 来袭攻击解析 / 音效开关 ===== */
+let __confirmCb = null;
+function showConfirm(title, text, okText, cb){
+  document.getElementById("confirmTitle").textContent = title;
+  document.getElementById("confirmText").innerHTML = text;
+  document.getElementById("confirmOk").textContent = okText || "确定";
+  __confirmCb = cb || null;
+  document.getElementById("confirmPanel").style.display = "flex";
+}
+function closeConfirm(ok){
+  document.getElementById("confirmPanel").style.display = "none";
+  const cb = __confirmCb; __confirmCb = null;
+  if(ok && cb){ cb(); }
+}
+// 点击"结束回合"：若有破封神兽本回合未行动，先告知狂性反噬代价
+function requestEndTurn(){
+  if(G.ended || !canActNow()) return;
+  const me = mySide();
+  if(G.mode==="pvp" && G.waitingPeer) return;
+  const rageUnits = me.field.filter(s=>s && s.broken && !s.attacked && !s.frozen && !s.skillUsed);
+  if(rageUnits.length > 0){
+    const loss = rageUnits.length * CFG.rageDamage;
+    const names = rageUnits.map(s=>s.name).join("、");
+    showConfirm("结束回合？",
+      `场上 <b>${names}</b> 本回合未出手，结束时将触发狂性反噬：<br>你的本源 <b style="color:#C0392B">−${loss}</b>（当前 ${me.hp}）。`,
+      "仍然结束", ()=> endTurn());
+    return;
+  }
+  endTurn();
+}
+// 判定"谁需要选择防御者"：三种模式的发起方结构不同，避免在热座/PvP 下把徽标贴到攻击方场上
+function pendingDefenderSide(){
+  if(!ui || ui.mode!=="defend" || !G) return null;
+  let attacker = null;
+  if(ui.pending && ui.pending.s){                       // 打 AI：敌方神兽挂起
+    attacker = G.ai;
+  } else if(ui.pending && ui.pending.hpAtt){            // 热座：当前行动方发起
+    attacker = ui.pending.hpAtt.attSide;
+  } else if(ui.pending && ui.pending.hpReq){            // PvP：远端 role 发起
+    attacker = localSide(ui.pending.hpReq.attRole);
+  }
+  if(!attacker) return null;
+  return attacker === G.player ? G.ai : G.player;
+}
+// 解析当前待处理的"攻本源"请求，返回 {atk, element, name}（三种模式结构不同）
+function pendingAttackInfo(){
+  if(!ui || !ui.pending) return null;
+  if(ui.pending.s && ui.pending.atk != null){          // 打 AI：敌方挂起
+    return { atk: ui.pending.atk, element: ui.pending.s.element, name: ui.pending.s.name };
+  }
+  if(ui.pending.hpAtt){                                 // 热座
+    const p = ui.pending.hpAtt, s = p.attSide.field[p.attIdx];
+    if(!s) return null;
+    return { atk: effAtk(s, p.attSide), element: s.element, name: s.name };
+  }
+  if(ui.pending.hpReq){                                 // PvP
+    const p = ui.pending.hpReq, side = localSide(p.attRole), s = side.field[p.attIdx];
+    if(!s) return null;
+    return { atk: effAtk(s, side), element: s.element, name: s.name };
+  }
+  return null;
+}
+function toggleSfx(){
+  const on = SFX.toggle();
+  const b = document.getElementById("sfxBtn");
+  if(b){ b.textContent = on ? "音效 开" : "音效 关"; b.style.opacity = on ? "1" : ".6"; }
+  if(on) logMsg("音效已开启。","s"); else logMsg("音效已关闭。","s");
+}
+function syncSfxBtn(){
+  const b = document.getElementById("sfxBtn");
+  if(b){ const on = SFX.on(); b.textContent = on ? "音效 开" : "音效 关"; b.style.opacity = on ? "1" : ".6"; }
+}
 
 /* ===== 无按钮式交互（v1.9）：直攻本源 / 直施本源神器 / 点空位或拖拽部署 ===== */
 function markHudTarget(on){
@@ -2338,20 +2507,148 @@ function aimDraw(toX, toY, snapped){
   }
   if(aimHead){ aimHead.setAttribute("cx", toX); aimHead.setAttribute("cy", toY); }
 }
+/* ---------- 瞄准伤害预告（v3.0）：把"造成多少、是否克制、能否击杀"直接算给玩家 ---------- */
+let aimTipEl = null;
+function aimTipShow(x, y, html){
+  if(!aimTipEl){
+    aimTipEl = document.createElement("div");
+    aimTipEl.className = "aim-tip";
+    document.body.appendChild(aimTipEl);
+  }
+  aimTipEl.innerHTML = html;
+  aimTipEl.style.left = Math.round(x) + "px";
+  aimTipEl.style.top  = Math.round(y) + "px";
+  aimTipEl.classList.add("on");
+}
+function aimTipHide(){
+  if(aimTipEl) aimTipEl.classList.remove("on");
+}
+function aimPreviewHtml(targetUnit){
+  const me = mySide();
+  if(!me || ui.selField===null) return null;
+  const att = me.field[ui.selField];
+  if(!att || !targetUnit) return null;
+  const base = effAtk(att, me);
+  const mod = getCounterMod(att.element, targetUnit.element);
+  const dmg = Math.max(CFG.minDamage, base + mod);
+  const kill = dmg >= targetUnit.hp;
+  let extra = "";
+  if(mod > 0) extra = ` <span style="color:#FFD98A">克制 +${mod}</span>`;
+  else if(mod < 0) extra = ` <span class="weak">被克 −${-mod}</span>`;
+  const killTxt = kill ? ` <span class="kill">· 击杀</span>` : ` · 余 ${targetUnit.hp - dmg}`;
+  return `<b>−${dmg}</b>${extra}${killTxt}`;
+}
+
 // 全局监听：仅在攻击模式下生效
 document.addEventListener("mousemove", (e)=>{
-  if(!G || !G.player || G.ended){ aimClear(); return; }
-  if(ui.mode!=="attack"){ aimClear(); return; }
+  if(!G || !G.player || G.ended){ aimClear(); aimTipHide(); return; }
+  if(ui.mode!=="attack"){ aimClear(); aimTipHide(); return; }
   const el = document.elementFromPoint(e.clientX, e.clientY);
   const slot = el && el.closest ? el.closest("#aiField .slot") : null;
   const targetCard = slot ? slot.querySelector(".card") : null;
   if(targetCard){
     const tr = targetCard.getBoundingClientRect();
     aimDraw(tr.left + tr.width/2, tr.top + tr.height/2, true);
+    const idx = Number(slot.dataset.slotIdx);
+    const opp = oppSide();
+    const unit = opp && opp.field[idx];
+    const html = unit ? aimPreviewHtml(unit) : null;
+    if(html) aimTipShow(tr.right - 6, tr.top + 8, html);
+    else aimTipHide();
   } else {
     aimDraw(e.clientX, e.clientY, false);
+    // 未指向目标时提示"点本源条可直攻本源"
+    aimTipShow(e.clientX, e.clientY, `<span style="opacity:.85">点击上方敌方本源条 → 直攻本源</span>`);
   }
 });
+/* ============ 音效系统（v3.0，Web Audio 合成，零素材） ============
+ * 设计：所有音色由振荡器/噪声实时合成，不引入任何音频文件（遵守单文件零依赖约束）。
+ * 触发点与动画同帧（由 anim* 函数直接调用），晚一帧就没有打击感。
+ * 首次用户交互后才可发声（浏览器自动播放策略），AudioContext 懒创建。 */
+const SFX = (function(){
+  let ctx = null, master = null, noiseBuf = null;
+  const VOL = 0.26;
+  function ensure(){
+    if(!ctx){
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if(!AC) return null;
+      try{ ctx = new AC(); }catch(e){ return null; }
+      master = ctx.createGain();
+      master.gain.value = VOL;
+      master.connect(ctx.destination);
+      // 预生成 0.6s 白噪声缓冲，供打击/破碎类音色复用
+      const len = Math.floor(ctx.sampleRate * 0.6);
+      noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      let seed = 22222;                       // 固定种子 LCG 生成噪声，保证音色可复现（不引入真随机）
+      for(let i=0;i<len;i++){ seed = (seed*1103515245 + 12345) & 0x7fffffff; d[i] = (seed/0x3fffffff) - 1; }
+    }
+    if(ctx.state === "suspended"){ try{ ctx.resume(); }catch(e){} }
+    return ctx;
+  }
+  function tone(freq, dur, type, gain, toFreq){
+    const c = ensure(); if(!c) return;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = type || "sine";
+    o.frequency.setValueAtTime(freq, c.currentTime);
+    if(toFreq) o.frequency.exponentialRampToValueAtTime(Math.max(20, toFreq), c.currentTime + dur);
+    g.gain.setValueAtTime(0.0001, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(gain == null ? 0.5 : gain, c.currentTime + Math.min(0.012, dur*0.2));
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+    o.connect(g); g.connect(master);
+    o.start(); o.stop(c.currentTime + dur + 0.02);
+  }
+  function noise(dur, gain, from, to){
+    const c = ensure(); if(!c || !noiseBuf) return;
+    const s = c.createBufferSource(); s.buffer = noiseBuf;
+    const f = c.createBiquadFilter(); f.type = "lowpass";
+    f.frequency.setValueAtTime(from || 2400, c.currentTime);
+    f.frequency.exponentialRampToValueAtTime(Math.max(80, to || 400), c.currentTime + dur);
+    const g = c.createGain();
+    g.gain.setValueAtTime(gain == null ? 0.35 : gain, c.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+    s.connect(f); f.connect(g); g.connect(master);
+    s.start(); s.stop(c.currentTime + dur + 0.02);
+  }
+  const BANKS = {
+    place(){ tone(220, 0.09, "triangle", 0.42); noise(0.06, 0.20, 1600, 500); },      // 落子
+    swing(){ noise(0.09, 0.30, 900, 220); },                                          // 破风
+    hit(){ tone(96, 0.13, "sine", 0.55); noise(0.10, 0.26, 1200, 300); },             // 受击闷响
+    crit(){ tone(150, 0.10, "sine", 0.5, 70); noise(0.16, 0.34, 2000, 260); },        // 克制重击
+    hp(){ tone(72, 0.22, "sine", 0.45, 48); noise(0.14, 0.20, 900, 200); },           // 本源扣血
+    break(){ tone(392, 0.55, "sine", 0.34); tone(587, 0.55, "sine", 0.24); noise(0.3, 0.16, 3000, 600); }, // 破封（纯五度上行）
+    seal(){ tone(300, 0.35, "triangle", 0.3, 140); },                                  // 镇封
+    death(){ noise(0.32, 0.42, 2200, 120); tone(60, 0.3, "sine", 0.4, 32); },         // 阵亡
+    win(){ [523, 659, 784].forEach((f,i)=> setTimeout(()=>tone(f, 0.34, "sine", 0.36), i*110)); },
+    lose(){ [392, 294].forEach((f,i)=> setTimeout(()=>tone(f, 0.45, "sine", 0.32), i*140)); },
+    turn(){ tone(660, 0.08, "triangle", 0.16); },
+    click(){ tone(880, 0.03, "square", 0.06); }
+  };
+  function enabled(){
+    try{
+      if(typeof UserSys !== "undefined" && UserSys.profile && UserSys.profile.sfxOff) return false;
+    }catch(e){}
+    return true;
+  }
+  return {
+    play(name){
+      if(!enabled()) return;
+      const fn = BANKS[name];
+      if(!fn) return;
+      try{ fn(); }catch(e){}
+    },
+    toggle(){
+      try{
+        UserSys.profile.sfxOff = !UserSys.profile.sfxOff;
+        UserSys.profile.updatedAt = Date.now();
+        UserSys.save();
+        if(!UserSys.profile.sfxOff){ ensure(); this.play("click"); }
+        return !UserSys.profile.sfxOff;
+      }catch(e){ return false; }
+    },
+    on(){ return enabled(); }
+  };
+})();
 /* ============ 在线对战（P2P WebRTC + 手动信令） ============ */
 let pc = null;
 function openMenu(){ document.getElementById("modeMenu").style.display="flex"; }
@@ -2551,6 +2848,7 @@ function executeAct(a){
 UserSys.init();
 openMenu();
 syncCfgInputs();
+if(typeof syncSfxBtn === "function") syncSfxBtn();
 // v1.9：Esc 取消当前选择（无按钮式交互的逃生口）
 document.addEventListener("keydown", (e)=>{
   if(e.key==="Escape"){
